@@ -11,6 +11,7 @@
   "dependencies": {
     "@expo/metro-runtime": "~3.2.1",
     "@react-native-community/masked-view": "^0.1.11",
+    "@react-native-community/netinfo": "^11.3.2",
     "@react-native-google-signin/google-signin": "^12.2.0",
     "@react-native-picker/picker": "^2.7.6",
     "@react-navigation/bottom-tabs": "^6.5.20",
@@ -19,6 +20,7 @@
     "@types/react": "~18.2.79",
     "axios": "^1.7.2",
     "expo": "~51.0.10",
+    "expo-auth-session": "^5.5.2",
     "expo-barcode-scanner": "^13.0.1",
     "expo-document-picker": "~12.0.2",
     "expo-file-system": "~17.0.1",

@@ -39,7 +39,7 @@ const BarcodeScannerComponent = ({ onScan }) => {
               text: "Aceptar",
               onPress: async () => {
                 try {
-                  const loanResponse = await axios.get(`http://172.168.3.41:3000/ulsa/getLoanByObjectId?id=${object._id}`);
+                  const loanResponse = await axios.get(`http://ulsaceiit.xyz/ulsa/getLoanByObjectId?id=${object._id}`);
                   const loan = loanResponse.data;
                   console.log('Loan fetched:', loan);
 
