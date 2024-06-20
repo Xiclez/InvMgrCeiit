@@ -47,8 +47,15 @@ const PrestamosScreen = () => {
       <Text>Apellido: {item.userApellido}</Text>
       <Text>Matrícula: {item.userMatricula}</Text>
       <Text>Objeto: {item.objectName}</Text>
-      <Text>Fecha: {new Date(item.date).toLocaleString()}</Text>
-      <Text>Status: {item.status ? 'Activo' : 'Inactivo'}</Text>
+      <Text>Fecha Apertura: {new Date(item.date).toLocaleString()}</Text>
+      {item.status ? (
+        <Text>Status: Activo</Text>
+      ) : (
+        <>
+          <Text>Fecha Cierre: {item.returnDate ? new Date(item.returnDate).toLocaleString() : 'N/A'}</Text>
+          <Text>Status: Inactivo</Text>
+        </>
+      )}
     </View>
   );
 

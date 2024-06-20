@@ -1,18 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import { View, Text, Button, Alert, StyleSheet, TextInput, Platform } from 'react-native';
 import SignatureCanvas from 'react-native-signature-canvas';
 import { PDFDocument, rgb } from 'pdf-lib';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import axios from "axios";
 
-const ContractForm = ({ user, object, onLoanRegister }) => {
+const ReturnContractForm = ({ route }) => {
+  const { user, object, loanId } = route.params;
   const [ceiitName, setCeiitName] = useState('');
-  const [loanSignature, setLoanSignature] = useState('');
+  const [returnSignature, setReturnSignature] = useState('');
   const [receiverSignature, setReceiverSignature] = useState('');
   const [isSigned, setIsSigned] = useState(false);
-  const loanSignRef = useRef(null);
+  const returnSignRef = useRef(null);
   const receiverSignRef = useRef(null);
   const [logoBase64, setLogoBase64] = useState('');
+  const navigation = useNavigation();
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -24,7 +28,7 @@ const ContractForm = ({ user, object, onLoanRegister }) => {
 
   const handleSaveSignatures = () => {
     console.log("Saving signatures...");
-    loanSignRef.current.readSignature();
+    returnSignRef.current.readSignature();
     receiverSignRef.current.readSignature();
     setIsSigned(true);
     Alert.alert("Firmas guardadas correctamente");
@@ -32,7 +36,7 @@ const ContractForm = ({ user, object, onLoanRegister }) => {
 
   const handleSaveContract = async () => {
     console.log("Saving contract...");
-    if (!ceiitName || !loanSignature || !receiverSignature) {
+    if (!ceiitName || !returnSignature || !receiverSignature) {
       Alert.alert("Por favor complete todos los campos");
       return;
     }
@@ -41,24 +45,29 @@ const ContractForm = ({ user, object, onLoanRegister }) => {
     console.log("File URI:", fileUri);
     if (fileUri) {
       await saveForm(fileUri);
-      handleLoanRegisterClick();
+      await handleReturnRegisterClick(fileUri);
       await shareFile(fileUri);
     }
   };
 
-  const handleLoanRegisterClick = () => {
-    console.log("Registering loan...");
-    onLoanRegister({
-      userId: user._id,
-      ceiitId: object._id,
-      date: new Date().toISOString()
-    });
-    Alert.alert("Préstamo registrado correctamente");
+  const handleReturnRegisterClick = async (fileUri) => {
+    console.log("Registering return...");
+    try {
+      await axios.post('http://172.168.3.41:3000/ulsa/returnLoan', { 
+        loanId: loanId, 
+        linkCloseLoan: fileUri // Asegúrate de tener un enlace válido
+      });
+      Alert.alert("Devolución registrada correctamente");
+      navigation.navigate('ScannerScreen');
+    } catch (error) {
+      console.error("Error al registrar la devolución:", error);
+      Alert.alert("Error al registrar la devolución");
+    }
   };
 
-  const handleLoanSignature = (signature) => {
-    console.log("Loan signature captured");
-    setLoanSignature(signature);
+  const handleReturnSignature = (signature) => {
+    console.log("Return signature captured");
+    setReturnSignature(signature);
   };
 
   const handleReceiverSignature = (signature) => {
@@ -69,10 +78,10 @@ const ContractForm = ({ user, object, onLoanRegister }) => {
   const clearForm = () => {
     console.log("Clearing form...");
     setCeiitName('');
-    setLoanSignature('');
+    setReturnSignature('');
     setReceiverSignature('');
     setIsSigned(false);
-    loanSignRef.current.clearSignature();
+    returnSignRef.current.clearSignature();
     receiverSignRef.current.clearSignature();
   };
 
@@ -116,21 +125,21 @@ const ContractForm = ({ user, object, onLoanRegister }) => {
         y -= lineSpacing;
       };
 
-      addText('Contrato de Préstamo', width - 2 * margin);
+      addText('Contrato de Devolución', width - 2 * margin);
       y -= lineSpacing;
       addText(new Date().toLocaleDateString(), width - 2 * margin);
       y -= lineSpacing;
-      addText(object.Lugar || '', width - 2 * margin);
+      addText(object.lugar || 'Cd. Chihuahua, Chihuahua', width - 2 * margin);
       y -= lineSpacing;
 
-      const contractText = `Por medio del presente, doy fe que ${user.name || ''} ${user.surName || ''} con matrícula ${user.tuition || ''} tiene en su poder el objeto ${object.NOMBRE || ''} con número de serie ${object._id} en óptimas condiciones y se compromete a regresarlo igualmente en condiciones en el plazo establecido.`;
+      const contractText = `Por medio del presente, se certifica que ${user.name || ''} ${user.surName || ''} con matrícula ${user.tuition || ''} ha devuelto el objeto ${object.NOMBRE || ''} con número de serie ${object._id} en óptimas condiciones, y que ha sido inspeccionado y validado su funcionamiento y condiciones.`;
       addText(contractText, width - 2 * margin);
       y -= lineSpacing;
       addText(`Nombre del encargado: ${ceiitName}`, width - 2 * margin);
 
-      if (loanSignature) {
-        const loanSignatureImage = await pdfDoc.embedPng(`data:image/png;base64,${loanSignature}`);
-        page.drawImage(loanSignatureImage, {
+      if (returnSignature) {
+        const returnSignatureImage = await pdfDoc.embedPng(`data:image/png;base64,${returnSignature}`);
+        page.drawImage(returnSignatureImage, {
           x: margin,
           y: y - 6 * lineSpacing,
           width: 100,
@@ -174,7 +183,7 @@ const ContractForm = ({ user, object, onLoanRegister }) => {
   };
 
   const getFileUri = async () => {
-    const fileName = `contract_form_${new Date().getTime()}.pdf`;
+    const fileName = `return_contract_${new Date().getTime()}.pdf`;
     let fileUri = '';
 
     if (Platform.OS === 'android') {
@@ -201,9 +210,9 @@ const ContractForm = ({ user, object, onLoanRegister }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>{new Date().toLocaleDateString()}</Text>
-      <Text style={styles.text}>{object.Lugarr}</Text>
+      <Text style={styles.text}>{object.lugar || 'Cd. Chihuahua, Chihuahua'}</Text>
       <Text style={styles.text}>
-        Por medio del presente, doy fe que {user.name} {user.surName} con matrícula {user.tuition} tiene en su poder el objeto {object.NOMBRE} con número de serie {object._id} en óptimas condiciones y se compromete a regresarlo igualmente en condiciones en el plazo establecido.
+        Por medio del presente, se certifica que {user.name} {user.surName} con matrícula {user.tuition} ha devuelto el objeto {object.NOMBRE} con número de serie {object._id} en óptimas condiciones, y que ha sido inspeccionado y validado su funcionamiento y condiciones.
       </Text>
       <TextInput
         style={styles.largeInput}
@@ -214,9 +223,9 @@ const ContractForm = ({ user, object, onLoanRegister }) => {
       />
       <Text>Firma del Aval</Text>
       <SignatureCanvas
-        ref={loanSignRef}
-        onOK={handleLoanSignature}
-        onEmpty={() => setLoanSignature('')}
+        ref={returnSignRef}
+        onOK={handleReturnSignature}
+        onEmpty={() => setReturnSignature('')}
         descriptionText="Firma"
         clearText="Limpiar"
         confirmText="Guardar"
@@ -243,10 +252,7 @@ const ContractForm = ({ user, object, onLoanRegister }) => {
       <Button title="Guardar Contrato" onPress={handleSaveContract} />
     </View>
   );
-  
-  
 };
-
 
 const styles = StyleSheet.create({
   container: {
@@ -272,4 +278,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ContractForm;
+export default ReturnContractForm;
+

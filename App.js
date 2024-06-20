@@ -7,23 +7,26 @@ import ScannerScreen from './app/ScannerScreen';
 import UserSearchScreen from './app/UserSearchScreen';
 import ContractScreen from './app/ContractScreen';
 import PrestamosScreen from './app/PrestamosScreen';
-import { registerRootComponent } from 'expo';
+import BarcodeScannerComponent from './components/BarcodeScannerComponent';
+import ReturnContractForm from './components/ReturnContractForm';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function ScannerStack() {
   return (
-    <Stack.Navigator initialRouteName="Home">
+    <Stack.Navigator initialRouteName="Scanner">
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="ScannerScreen" component={ScannerScreen} />
       <Stack.Screen name="UserSearchScreen" component={UserSearchScreen} />
       <Stack.Screen name="ContractScreen" component={ContractScreen} />
+      <Stack.Screen name="BarcodeScannerComponent" component={BarcodeScannerComponent} />
+      <Stack.Screen name="ReturnContractForm" component={ReturnContractForm} />
     </Stack.Navigator>
   );
 }
 
-function App() {
+export default function App() {
   return (
     <NavigationContainer>
       <Tab.Navigator>
@@ -33,7 +36,3 @@ function App() {
     </NavigationContainer>
   );
 }
-
-export default App;
-
-registerRootComponent(App);
