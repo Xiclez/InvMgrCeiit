@@ -1,44 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, FlatList, StyleSheet, Alert, RefreshControl } from 'react-native';
 import axios from 'axios';
 
 const PrestamosScreen = () => {
   const [prestamos, setPrestamos] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchPrestamos = async () => {
+    try {
+      const response = await fetch('http://ulsaceiit.xyz/ulsa/getAllLoans');
+      const data = await response.json();
+      console.log('Loans fetched:', data);
+      const loans = await Promise.all(data.obj.map(async (loan) => {
+        try {
+          const userResponse = await axios.get('http://ulsaceiit.xyz/users/buscar_usuario', { params: { id: loan.nameUser } });
+          const objectResponse = await axios.get(`http://ulsaceiit.xyz/ulsa/searchObject?id=${loan.nameObj}`);
+          console.log('User fetched:', userResponse.data);
+          console.log('Object fetched:', objectResponse.data);
+          const user = userResponse.data.usuarios.find(u => u._id === loan.nameUser);
+          const object = objectResponse.data;
+          return {
+            ...loan,
+            userName: user ? user.name : 'N/A',
+            userApellido: user ? user.surName : 'N/A',
+            userMatricula: user ? user.tuition : 'N/A',
+            objectName: object ? object.NOMBRE : 'N/A',
+          };
+        } catch (error) {
+          console.error('Error fetching user or object data:', error);
+          return loan;
+        }
+      }));
+      setPrestamos(loans);
+    } catch (error) {
+      console.error('Error fetching loans:', error);
+      Alert.alert("Error al obtener los préstamos");
+    }
+  };
 
   useEffect(() => {
-    const fetchPrestamos = async () => {
-      try {
-        const response = await fetch('http://ulsaceiit.xyz/ulsa/getAllLoans');
-        const data = await response.json();
-        console.log('Loans fetched:', data);
-        const loans = await Promise.all(data.obj.map(async (loan) => {
-          try {
-            const userResponse = await axios.get('http://ulsaceiit.xyz/users/buscar_usuario', { params: { id: loan.nameUser } });
-            const objectResponse = await axios.get(`http://ulsaceiit.xyz/ulsa/searchObject?id=${loan.nameObj}`);
-            console.log('User fetched:', userResponse.data);
-            console.log('Object fetched:', objectResponse.data);
-            const user = userResponse.data.usuarios.find(u => u._id === loan.nameUser);
-            const object = objectResponse.data;
-            return {
-              ...loan,
-              userName: user ? user.name : 'N/A',
-              userApellido: user ? user.surName : 'N/A',
-              userMatricula: user ? user.tuition : 'N/A',
-              objectName: object ? object.NOMBRE : 'N/A',
-            };
-          } catch (error) {
-            console.error('Error fetching user or object data:', error);
-            return loan;
-          }
-        }));
-        setPrestamos(loans);
-      } catch (error) {
-        console.error('Error fetching loans:', error);
-        Alert.alert("Error al obtener los préstamos");
-      }
-    };
-
     fetchPrestamos();
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchPrestamos().then(() => setRefreshing(false));
   }, []);
 
   const renderItem = ({ item }) => (
@@ -65,6 +71,9 @@ const PrestamosScreen = () => {
         data={prestamos}
         renderItem={renderItem}
         keyExtractor={item => item._id}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       />
     </View>
   );
