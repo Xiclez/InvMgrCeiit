@@ -7,6 +7,7 @@ import ScannerScreen from './app/ScannerScreen';
 import UserSearchScreen from './app/UserSearchScreen';
 import ContractScreen from './app/ContractScreen';
 import PrestamosScreen from './app/PrestamosScreen';
+import ObjectScreen from './app/ObjectScreen';
 import BarcodeScannerComponent from './components/BarcodeScannerComponent';
 import ReturnContractForm from './components/ReturnContractForm';
 
@@ -30,6 +31,7 @@ export default function App() {
   return (
     <NavigationContainer>
       <Tab.Navigator>
+        <Tab.Screen name="Objetos" component={ObjectScreen} />
         <Tab.Screen name="Scanner" component={ScannerStack} />
         <Tab.Screen name="Prestamos" component={PrestamosScreen} />
       </Tab.Navigator>
