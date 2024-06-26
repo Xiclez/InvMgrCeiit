@@ -6,6 +6,7 @@ import HomeScreen from './app/HomeScreen';
 import ScannerScreen from './app/ScannerScreen';
 import UserSearchScreen from './app/UserSearchScreen';
 import ContractScreen from './app/ContractScreen';
+import ContractSignatureScreen from './app/ContractSignatureScreen'; // Import the new screen
 import PrestamosScreen from './app/PrestamosScreen';
 import ObjectScreen from './app/ObjectScreen';
 import BarcodeScannerComponent from './components/BarcodeScannerComponent';
@@ -21,6 +22,7 @@ function ScannerStack() {
       <Stack.Screen name="ScannerScreen" component={ScannerScreen} />
       <Stack.Screen name="UserSearchScreen" component={UserSearchScreen} />
       <Stack.Screen name="ContractScreen" component={ContractScreen} />
+      <Stack.Screen name="ContractSignatureScreen" component={ContractSignatureScreen} /> 
       <Stack.Screen name="BarcodeScannerComponent" component={BarcodeScannerComponent} />
       <Stack.Screen name="ReturnContractForm" component={ReturnContractForm} />
     </Stack.Navigator>
