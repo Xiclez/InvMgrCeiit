@@ -1,46 +1,68 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+// ObjectScreen.tsx
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, StyleSheet, Dimensions, Image, TouchableOpacity } from 'react-native';
 
-const DataListScreen = () => {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
+const ObjectScreen = ({ navigation }) => {
+  const [objects, setObjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const fetchObjects = async () => {
+    try {
+      console.log('Fetching objects...');
+      const response = await fetch('http://ulsaceiit.xyz/ulsa/getAllObjects');
+      const data = await response.json();
+      console.log('Response from server:', data);
+      if (data.objs) {
+        const groupedObjects = groupBy(data.objs, 'NOMBRE');
+        setObjects(groupedObjects);
+        console.log('Objects set:', groupedObjects);
+      } else {
+        console.log('No objects found in response');
+      }
+    } catch (error) {
+      console.error('Error fetching objects:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetch('http://ulsaceiit.xyz/ulsa/getAllObjects')
-      .then(response => response.json())
-      .then(json => {
-        setData(json.objs);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error(error);
-        setLoading(false);
-      });
+    fetchObjects();
   }, []);
 
-  const renderItem = ({ item }) => (
-    <View style={styles.item}>
-      <Text style={styles.title}>{item.NOMBRE}</Text>
-      <Text>Lugar: {item.Lugar}</Text>
-      <Text>Available: {item.isAvailable ? 'Yes' : 'No'}</Text>
-    </View>
+  const groupBy = (array, key) => {
+    return array.reduce((result, currentValue) => {
+      (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
+      return result;
+    }, {});
+  };
+
+  const renderItem = ({ item }: { item: any }) => (
+    <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('ObjectDetail', { objects: item })}>
+      <Image
+        style={styles.image}
+        source={{ uri: item[0].imgURL }}
+        resizeMode="cover"
+      />
+      <Text style={styles.label}>{item[0].NOMBRE}</Text>
+    </TouchableOpacity>
   );
 
-  if (loading) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
-  }
+  const numColumns = 2;
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={data}
-        renderItem={renderItem}
-        keyExtractor={item => item._id}
-      />
+      {loading ? (
+        <Text>Loading...</Text>
+      ) : (
+        <FlatList
+          data={Object.values(objects)}
+          renderItem={renderItem}
+          keyExtractor={item => item[0]._id.$oid}
+          numColumns={numColumns}
+          contentContainerStyle={styles.listContainer}
+        />
+      )}
     </View>
   );
 };
@@ -48,22 +70,28 @@ const DataListScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 20,
+    padding: 10,
   },
-  item: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+  listContainer: {
+    paddingBottom: 10,
   },
-  title: {
-    fontSize: 18,
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    margin: 10,
+    overflow: 'hidden',
+    width: (Dimensions.get('window').width / 2) - 20,
+  },
+  image: {
+    width: '100%',
+    height: 150,
+  },
+  label: {
+    padding: 10,
+    textAlign: 'center',
+    fontSize: 16,
     fontWeight: 'bold',
-  },
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });
 
-export default DataListScreen;
+export default ObjectScreen;
