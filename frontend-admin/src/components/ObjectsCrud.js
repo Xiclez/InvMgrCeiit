@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from 'react-modal';
+import QRCode from 'qrcode.react';
 import {
   getAllObjects,
   addObject,
@@ -16,28 +17,40 @@ const ObjectsCrud = ({ token }) => {
   const [newObject, setNewObject] = useState({ NOMBRE: '', Lugar: '', isAvailable: false });
   const [selectedObject, setSelectedObject] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [resultsPerPage, setResultsPerPage] = useState(10);
+  const [qrCodeId, setQrCodeId] = useState('');
 
   useEffect(() => {
-    loadObjects();
-  }, []);
+    // Fetch all objects when the component mounts
+    const fetchObjects = async () => {
+      try {
+        const objs = await getAllObjects(token);
+        setObjects(objs);
+      } catch (error) {
+        console.error('Error al obtener objetos', error);
+      }
+    };
 
-  const loadObjects = async () => {
-    try {
-      const objs = await getAllObjects(token);
-      setObjects(objs || []);
-    } catch (error) {
-      console.error('Error al cargar objetos', error);
-      setObjects([]);
-    }
-  };
+    fetchObjects();
+  }, [token]);
 
   const handleAddObject = async () => {
     try {
-      await addObject(newObject, token);
+      const response = await addObject(newObject, token);
       setNewObject({ NOMBRE: '', Lugar: '', isAvailable: false });
       setIsModalOpen(false);
-      loadObjects();
+      setQrCodeId(response.obj._id); // Set the QR code ID
+      setIsQrModalOpen(true); // Open the QR modal
+      if (searchQuery) {
+        handleSearch(searchQuery);
+      } else {
+        // Refresh the objects list after adding a new object
+        const objs = await getAllObjects(token);
+        setObjects(objs);
+      }
     } catch (error) {
       console.error('Error al agregar objeto', error);
     }
@@ -48,7 +61,13 @@ const ObjectsCrud = ({ token }) => {
       try {
         await updateObject(selectedObject, token);
         setSelectedObject(null);
-        loadObjects();
+        if (searchQuery) {
+          handleSearch(searchQuery);
+        } else {
+          // Refresh the objects list after updating an object
+          const objs = await getAllObjects(token);
+          setObjects(objs);
+        }
       } catch (error) {
         console.error('Error al actualizar objeto', error);
       }
@@ -56,11 +75,20 @@ const ObjectsCrud = ({ token }) => {
   };
 
   const handleDeleteObject = async (objectName) => {
-    try {
-      await deleteObject(objectName, token);
-      loadObjects();
-    } catch (error) {
-      console.error('Error al eliminar objeto', error);
+    const confirmed = window.confirm('¿Estás seguro de que deseas eliminar este objeto?');
+    if (confirmed) {
+      try {
+        await deleteObject(objectName, token);
+        if (searchQuery) {
+          handleSearch(searchQuery);
+        } else {
+          // Refresh the objects list after deleting an object
+          const objs = await getAllObjects(token);
+          setObjects(objs);
+        }
+      } catch (error) {
+        console.error('Error al eliminar objeto', error);
+      }
     }
   };
 
@@ -73,13 +101,57 @@ const ObjectsCrud = ({ token }) => {
     }
   };
 
-  const filteredObjects = objects.filter((obj) =>
-    obj.NOMBRE && obj.NOMBRE.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleSearch = async (query) => {
+    setSearchQuery(query);
+    setCurrentPage(1);  // Reset to first page on new search
+    if (query.trim() === '') {
+      setObjects([]);
+    } else {
+      try {
+        const objs = await getAllObjects(token);
+        const lowerQuery = query.toLowerCase();
+        const filteredObjects = objs.filter((obj) =>
+          obj.NOMBRE && obj.NOMBRE.toLowerCase().includes(lowerQuery)
+        );
+        setObjects(filteredObjects);
+      } catch (error) {
+        console.error('Error al buscar objetos', error);
+        setObjects([]);
+      }
+    }
+  };
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const handleResultsPerPageChange = (e) => {
+    setResultsPerPage(Number(e.target.value));
+    setCurrentPage(1);  // Reset to first page on change
+  };
+
+  const downloadQRCode = () => {
+    const canvas = document.getElementById("qrCode");
+    const pngUrl = canvas
+      .toDataURL("image/png")
+      .replace("image/png", "image/octet-stream");
+    let downloadLink = document.createElement("a");
+    downloadLink.href = pngUrl;
+    downloadLink.download = `${qrCodeId}.png`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  };
+
+  // Logic for displaying current objects
+  const indexOfLastObject = currentPage * resultsPerPage;
+  const indexOfFirstObject = indexOfLastObject - resultsPerPage;
+  const currentObjects = objects.slice(indexOfFirstObject, indexOfLastObject);
+  const totalPages = Math.ceil(objects.length / resultsPerPage);
 
   return (
-    <div className="crud-container">
-      <div className="crud-box">
+    <div className="container">
+      <div className="search-bar">
         <h2>Buscar Objetos</h2>
         <input
           type="text"
@@ -87,21 +159,21 @@ const ObjectsCrud = ({ token }) => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
+        <button onClick={() => handleSearch(searchQuery)} className="crud-button">Buscar</button>
         <button onClick={() => setIsModalOpen(true)} className="crud-button">Agregar Objeto</button>
       </div>
-      <div className="crud-box">
-        <h2>Objetos</h2>
-        <table className="crud-table">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Lugar</th>
-              <th>Disponible</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredObjects.map((obj) => (
+      <table className="crud-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Lugar</th>
+            <th>Disponible</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {currentObjects.length > 0 ? (
+            currentObjects.map((obj) => (
               <tr key={obj.NOMBRE}>
                 <td>{obj.NOMBRE}</td>
                 <td>{obj.Lugar}</td>
@@ -111,9 +183,24 @@ const ObjectsCrud = ({ token }) => {
                   <button onClick={() => handleDeleteObject(obj.NOMBRE)} className="crud-button">🗑️</button>
                 </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="4">No se encontraron objetos.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+      <div className="pagination">
+        {[...Array(totalPages)].map((_, i) => (
+          <button
+            key={i + 1}
+            onClick={() => handlePageChange(i + 1)}
+            className={`page-button ${currentPage === i + 1 ? 'active' : ''}`}
+          >
+            {i + 1}
+          </button>
+        ))}
       </div>
       <Modal
         isOpen={isModalOpen}
@@ -148,7 +235,7 @@ const ObjectsCrud = ({ token }) => {
         </div>
       </Modal>
       {selectedObject && (
-        <div className="crud-box">
+        <div className="edit-box">
           <h2>Editar Objeto</h2>
           <div className="input-group">
             <input
@@ -175,6 +262,20 @@ const ObjectsCrud = ({ token }) => {
           </div>
         </div>
       )}
+      <Modal
+        isOpen={isQrModalOpen}
+        onRequestClose={() => setIsQrModalOpen(false)}
+        contentLabel="Código QR"
+        className="modal"
+        overlayClassName="overlay"
+      >
+        <h2>Código QR Generado</h2>
+        <div className="qr-code-container">
+          <QRCode id="qrCode" value={qrCodeId} size={256} level={"H"} includeMargin={true} />
+        </div>
+        <button onClick={downloadQRCode} className="crud-button">Descargar QR</button>
+        <button onClick={() => window.print()} className="crud-button">Imprimir QR</button>
+      </Modal>
     </div>
   );
 };

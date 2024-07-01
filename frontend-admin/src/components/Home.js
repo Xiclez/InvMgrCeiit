@@ -16,6 +16,8 @@ const Home = ({ username, onLogout }) => {
         <ul className="home-links">
           <li><Link to="/objects" className="home-link">Objetos</Link></li>
           <li><Link to="/loans" className="home-link">Préstamos</Link></li>
+          <li><Link to="/users" className="home-link">Usuarios</Link></li>
+
         </ul>
       </div>
     </div>

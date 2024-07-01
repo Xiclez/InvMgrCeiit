@@ -4,6 +4,7 @@ import Login from './components/Login';
 import Home from './components/Home';
 import ObjectsCrud from './components/ObjectsCrud';
 import LoansCrud from './components/LoansCrud';
+import UsersCrud from './components/UsersCrud';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -42,6 +43,7 @@ function App() {
         <Route path="/" element={<Home username={username} onLogout={handleLogout} />} />
         <Route path="/objects" element={<ObjectsCrud token={token} />} />
         <Route path="/loans" element={<LoansCrud token={token} />} />
+        <Route path="/users" element={<UsersCrud token={token} />} />
       </Routes>
     </Router>
   );

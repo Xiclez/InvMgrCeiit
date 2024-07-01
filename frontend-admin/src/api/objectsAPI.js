@@ -13,9 +13,15 @@ export const getAllObjects = async (token) => {
   return response.data.objs;
 };
 
-export const addObject = async (object, token) => {
-  const response = await axios.post(`${API_URL}/addObject`, object, getConfig(token));
-  return response.data.obj;
+export const addObject = async (newObject, token) => {
+  const response = await axios.post(`${API_URL}/addObject`, {
+    ob: newObject.NOMBRE,
+    ubi: newObject.Lugar,
+    esta: newObject.isAvailable
+  }, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+  });
+  return response.data;
 };
 
 export const updateObject = async (object, token) => {
