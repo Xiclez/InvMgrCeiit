@@ -3,6 +3,30 @@ body {
   font-family: Arial, sans-serif;
 }
 
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.inventory-table th,
+.inventory-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.inventory-table th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  text-align: left;
+  background-color: #f2f2f2;
+  color: black;
+}
+
+.table-container {
+  max-height: 400px; /* Puedes ajustar esta altura según sea necesario */
+  overflow-y: auto;
+}
+
 .container {
   display: flex;
   flex-direction: column;

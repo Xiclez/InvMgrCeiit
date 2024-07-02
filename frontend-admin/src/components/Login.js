@@ -19,7 +19,14 @@ const Login = ({ setToken, setUsername }) => {
         password: password,
       });
       const token = response.data.token;
-      const user = response.data.obj.username; 
+      const user = response.data.obj.username;
+      const role = response.data.obj.role;
+      
+      if (role === 'Usuario') {
+        setError('Tu cuenta no está autorizada para acceder a este recurso. Por favor contacta al Administrador');
+        return;
+      }
+      
       setToken(token);
       setUsername(user);
       localStorage.setItem('token', token);

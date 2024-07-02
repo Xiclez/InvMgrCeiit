@@ -1,133 +1,121 @@
-import React, { useState, useEffect } from 'react';
-import Modal from 'react-modal';
-import QRCode from 'qrcode.react';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import Modal from "react-modal";
+import QRCode from "qrcode.react";
 import {
   getAllObjects,
   addObject,
   updateObject,
   deleteObject,
-  readObject
-} from '../api/objectsAPI';
-import './Crud.css';
+  readObject,
+  uploadImageToCloudinary,
+} from "../api/objectsAPI";
+import {
+  Container,
+  Grid,
+  Paper,
+  Typography,
+  Box,
+  Button,
+  CircularProgress,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  TextField,
+  Checkbox,
+  FormControlLabel
+} from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
-Modal.setAppElement('#root');
+Modal.setAppElement("#root");
 
 const ObjectsCrud = ({ token }) => {
-  const [objects, setObjects] = useState([]);
-  const [newObject, setNewObject] = useState({ NOMBRE: '', Lugar: '', isAvailable: false });
-  const [selectedObject, setSelectedObject] = useState(null);
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [limit, setLimit] = useState(20);
+  const [page, setPage] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [resultsPerPage, setResultsPerPage] = useState(10);
-  const [qrCodeId, setQrCodeId] = useState('');
+  const [newObject, setNewObject] = useState({ NOMBRE: "", Lugar: "", imgURL: "" });
+  const [qrCodeId, setQrCodeId] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [manualUrl, setManualUrl] = useState(false);
 
   useEffect(() => {
-    // Fetch all objects when the component mounts
-    const fetchObjects = async () => {
+    const fetchData = async () => {
       try {
         const objs = await getAllObjects(token);
-        setObjects(objs);
+        setData(objs);
+        setLoading(false);
       } catch (error) {
-        console.error('Error al obtener objetos', error);
+        console.error("There was an error fetching the data!", error);
+        setLoading(false);
       }
     };
-
-    fetchObjects();
+    fetchData();
   }, [token]);
+
+  const handleLimitChange = (event) => {
+    setLimit(event.target.value);
+    setPage(0); // Reset page to 0 when limit changes
+  };
+
+  const handlePrevPage = () => {
+    setPage((prev) => Math.max(prev - 1, 0));
+  };
+
+  const handleNextPage = () => {
+    setPage((prev) => prev + 1);
+  };
+
+  const startIndex = page * limit;
+  const endIndex = startIndex + limit;
+  const currentPageData = data.slice(startIndex, endIndex);
+
+  const handleImageUpload = async (file) => {
+    setUploading(true);
+    try {
+      const response = await uploadImageToCloudinary(file);
+      console.log('Response from Cloudinary:', response); // Debugging line
+      if (response && response.secure_url) {
+        setNewObject((prevObject) => ({ ...prevObject, imgURL: response.secure_url }));
+      } else {
+        console.error("No se pudo obtener la URL segura de la respuesta de Cloudinary.");
+      }
+    } catch (error) {
+      console.error("Error uploading image", error);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleAddObject = async () => {
     try {
       const response = await addObject(newObject, token);
-      setNewObject({ NOMBRE: '', Lugar: '', isAvailable: false });
+      setNewObject({ NOMBRE: "", Lugar: "", imgURL: "" });
       setIsModalOpen(false);
       setQrCodeId(response.obj._id); // Set the QR code ID
       setIsQrModalOpen(true); // Open the QR modal
-      if (searchQuery) {
-        handleSearch(searchQuery);
-      } else {
-        // Refresh the objects list after adding a new object
-        const objs = await getAllObjects(token);
-        setObjects(objs);
-      }
+      const objs = await getAllObjects(token);
+      setData(objs);
     } catch (error) {
-      console.error('Error al agregar objeto', error);
+      console.error("Error al agregar objeto", error);
     }
   };
 
-  const handleUpdateObject = async () => {
-    if (selectedObject) {
-      try {
-        await updateObject(selectedObject, token);
-        setSelectedObject(null);
-        if (searchQuery) {
-          handleSearch(searchQuery);
-        } else {
-          // Refresh the objects list after updating an object
-          const objs = await getAllObjects(token);
-          setObjects(objs);
-        }
-      } catch (error) {
-        console.error('Error al actualizar objeto', error);
-      }
-    }
-  };
-
-  const handleDeleteObject = async (objectName) => {
-    const confirmed = window.confirm('¿Estás seguro de que deseas eliminar este objeto?');
+  const handleDeleteObject = async (objectId) => {
+    const confirmed = window.confirm("¿Estás seguro de que deseas eliminar este objeto?");
     if (confirmed) {
       try {
-        await deleteObject(objectName, token);
-        if (searchQuery) {
-          handleSearch(searchQuery);
-        } else {
-          // Refresh the objects list after deleting an object
-          const objs = await getAllObjects(token);
-          setObjects(objs);
-        }
-      } catch (error) {
-        console.error('Error al eliminar objeto', error);
-      }
-    }
-  };
-
-  const handleReadObject = async (objectName) => {
-    try {
-      const obj = await readObject(objectName, token);
-      setSelectedObject(obj);
-    } catch (error) {
-      console.error('Error al leer objeto', error);
-    }
-  };
-
-  const handleSearch = async (query) => {
-    setSearchQuery(query);
-    setCurrentPage(1);  // Reset to first page on new search
-    if (query.trim() === '') {
-      setObjects([]);
-    } else {
-      try {
+        await deleteObject(objectId, token);
         const objs = await getAllObjects(token);
-        const lowerQuery = query.toLowerCase();
-        const filteredObjects = objs.filter((obj) =>
-          obj.NOMBRE && obj.NOMBRE.toLowerCase().includes(lowerQuery)
-        );
-        setObjects(filteredObjects);
+        setData(objs);
       } catch (error) {
-        console.error('Error al buscar objetos', error);
-        setObjects([]);
+        console.error("Error al eliminar objeto", error);
       }
     }
-  };
-
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
-
-  const handleResultsPerPageChange = (e) => {
-    setResultsPerPage(Number(e.target.value));
-    setCurrentPage(1);  // Reset to first page on change
   };
 
   const downloadQRCode = () => {
@@ -143,65 +131,126 @@ const ObjectsCrud = ({ token }) => {
     document.body.removeChild(downloadLink);
   };
 
-  // Logic for displaying current objects
-  const indexOfLastObject = currentPage * resultsPerPage;
-  const indexOfFirstObject = indexOfLastObject - resultsPerPage;
-  const currentObjects = objects.slice(indexOfFirstObject, indexOfLastObject);
-  const totalPages = Math.ceil(objects.length / resultsPerPage);
+  if (loading) {
+    return <CircularProgress />;
+  }
 
   return (
-    <div className="container">
-      <div className="search-bar">
-        <h2>Buscar Objetos</h2>
-        <input
-          type="text"
-          placeholder="Buscar por nombre"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <button onClick={() => handleSearch(searchQuery)} className="crud-button">Buscar</button>
-        <button onClick={() => setIsModalOpen(true)} className="crud-button">Agregar Objeto</button>
-      </div>
-      <table className="crud-table">
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Lugar</th>
-            <th>Disponible</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {currentObjects.length > 0 ? (
-            currentObjects.map((obj) => (
-              <tr key={obj.NOMBRE}>
-                <td>{obj.NOMBRE}</td>
-                <td>{obj.Lugar}</td>
-                <td>{obj.isAvailable ? 'Sí' : 'No'}</td>
-                <td>
-                  <button onClick={() => handleReadObject(obj.NOMBRE)} className="crud-button">✏️</button>
-                  <button onClick={() => handleDeleteObject(obj.NOMBRE)} className="crud-button">🗑️</button>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="4">No se encontraron objetos.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-      <div className="pagination">
-        {[...Array(totalPages)].map((_, i) => (
-          <button
-            key={i + 1}
-            onClick={() => handlePageChange(i + 1)}
-            className={`page-button ${currentPage === i + 1 ? 'active' : ''}`}
-          >
-            {i + 1}
-          </button>
-        ))}
-      </div>
+    <Container>
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Typography variant="h4" component="div" gutterBottom>
+            Stocks and Inventory
+          </Typography>
+          <Typography variant="subtitle1" component="div" gutterBottom>
+            Update stock and inventory table
+          </Typography>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper>
+            <Box p={2}>
+              <Typography variant="h6">10 Categories</Typography>
+              <Typography variant="subtitle2">2 more than last year</Typography>
+            </Box>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper>
+            <Box p={2}>
+              <Typography variant="h6">300 Total items</Typography>
+              <Typography variant="subtitle2">10 more than last year</Typography>
+            </Box>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper>
+            <Box p={2}>
+              <Typography variant="h6">₦250,000,000 Total item cost</Typography>
+              <Typography variant="subtitle2">2.5% less than last year</Typography>
+            </Box>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper>
+            <Box p={2}>
+              <Typography variant="h6">20 Total suppliers</Typography>
+              <Typography variant="subtitle2">2 more than last week</Typography>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12}>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6">Update Inventory Table</Typography>
+            <Button variant="contained" color="primary" onClick={() => setIsModalOpen(true)}>
+              Update Inventory
+            </Button>
+          </Box>
+        </Grid>
+
+        <Grid item xs={12}>
+          <Paper>
+            <Box p={2}>
+              <Typography variant="h6">Stock List</Typography>
+              <div className="table-container">
+                <table className="inventory-table">
+                  <thead>
+                    <tr>
+                      <th>S/N</th>
+                      <th>Image</th>
+                      <th>Product Name</th>
+                      <th>Product ID</th>
+                      <th>Location</th>
+                      <th>Availability</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentPageData.map((item, index) => (
+                      <tr key={item._id}>
+                        <td>{startIndex + index + 1}</td>
+                        <td>
+                          <img src={item.imgURL} alt={item.NOMBRE} width="50" />
+                        </td>
+                        <td>{item.NOMBRE}</td>
+                        <td>{item._id}</td>
+                        <td>{item.Lugar}</td>
+                        <td>{item.isAvailable ? "Available" : "Not Available"}</td>
+                        <td>
+                          <EditIcon />
+                          <DeleteIcon onClick={() => handleDeleteObject(item._id)} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
+          <FormControl variant="outlined" size="small">
+            <InputLabel>Results per page</InputLabel>
+            <Select value={limit} onChange={handleLimitChange} label="Results per page">
+              <MenuItem value={20}>20</MenuItem>
+              <MenuItem value={50}>50</MenuItem>
+              <MenuItem value={100}>100</MenuItem>
+              <MenuItem value={200}>200</MenuItem>
+            </Select>
+          </FormControl>
+          <Box>
+            <Button variant="contained" onClick={handlePrevPage} disabled={page === 0}>
+              Previous
+            </Button>
+            <Button variant="contained" onClick={handleNextPage} disabled={endIndex >= data.length}>
+              Next
+            </Button>
+          </Box>
+        </Grid>
+      </Grid>
+
       <Modal
         isOpen={isModalOpen}
         onRequestClose={() => setIsModalOpen(false)}
@@ -211,57 +260,75 @@ const ObjectsCrud = ({ token }) => {
       >
         <h2>Agregar Objeto</h2>
         <div className="input-group">
-          <input
-            type="text"
-            placeholder="Nombre"
+          <TextField
+            fullWidth
+            label="Nombre"
             value={newObject.NOMBRE}
             onChange={(e) => setNewObject({ ...newObject, NOMBRE: e.target.value })}
+            variant="outlined"
+            margin="normal"
+            InputLabelProps={{
+              style: { color: 'black' },
+            }}
           />
-          <input
-            type="text"
-            placeholder="Lugar"
+          <TextField
+            fullWidth
+            label="Lugar"
             value={newObject.Lugar}
             onChange={(e) => setNewObject({ ...newObject, Lugar: e.target.value })}
+            variant="outlined"
+            margin="normal"
+            InputLabelProps={{
+              style: { color: 'black' },
+            }}
           />
-          <label>
-            Disponible:
-            <input
-              type="checkbox"
-              checked={newObject.isAvailable}
-              onChange={(e) => setNewObject({ ...newObject, isAvailable: e.target.checked })}
-            />
-          </label>
-          <button onClick={handleAddObject} className="crud-button">Agregar</button>
+          <TextField
+            fullWidth
+            label="Image URL"
+            value={newObject.imgURL}
+            InputProps={{
+              readOnly: !manualUrl,
+            }}
+            onChange={(e) => setNewObject({ ...newObject, imgURL: e.target.value })}
+            variant="outlined"
+            margin="normal"
+            InputLabelProps={{
+              style: { color: 'black' },
+            }}
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={manualUrl}
+                onChange={(e) => setManualUrl(e.target.checked)}
+              />
+            }
+            label="Introducir URL manualmente"
+            style={{ marginTop: '15px' }}
+          />
+          {!manualUrl && (
+            <div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleImageUpload(e.target.files[0])}
+                style={{ marginTop: '15px' }}
+              />
+              {uploading && <CircularProgress style={{ marginTop: '15px' }} />}
+            </div>
+          )}
+          <Button
+            onClick={handleAddObject}
+            variant="contained"
+            color="primary"
+            style={{ marginTop: '15px' }}
+            disabled={uploading || (!newObject.imgURL && !manualUrl)}
+          >
+            Agregar
+          </Button>
         </div>
       </Modal>
-      {selectedObject && (
-        <div className="edit-box">
-          <h2>Editar Objeto</h2>
-          <div className="input-group">
-            <input
-              type="text"
-              placeholder="Nombre"
-              value={selectedObject.NOMBRE}
-              readOnly
-            />
-            <input
-              type="text"
-              placeholder="Lugar"
-              value={selectedObject.Lugar}
-              onChange={(e) => setSelectedObject({ ...selectedObject, Lugar: e.target.value })}
-            />
-            <label>
-              Disponible:
-              <input
-                type="checkbox"
-                checked={selectedObject.isAvailable}
-                onChange={(e) => setSelectedObject({ ...selectedObject, isAvailable: e.target.checked })}
-              />
-            </label>
-            <button onClick={handleUpdateObject} className="crud-button">Actualizar</button>
-          </div>
-        </div>
-      )}
+
       <Modal
         isOpen={isQrModalOpen}
         onRequestClose={() => setIsQrModalOpen(false)}
@@ -273,11 +340,16 @@ const ObjectsCrud = ({ token }) => {
         <div className="qr-code-container">
           <QRCode id="qrCode" value={qrCodeId} size={256} level={"H"} includeMargin={true} />
         </div>
-        <button onClick={downloadQRCode} className="crud-button">Descargar QR</button>
-        <button onClick={() => window.print()} className="crud-button">Imprimir QR</button>
+        <Button onClick={downloadQRCode} variant="contained" color="primary" style={{ marginTop: '15px' }}>
+          Descargar QR
+        </Button>
+        <Button onClick={() => window.print()} variant="contained" color="primary" style={{ marginTop: '15px' }}>
+          Imprimir QR
+        </Button>
       </Modal>
-    </div>
+    </Container>
   );
 };
 
 export default ObjectsCrud;
+

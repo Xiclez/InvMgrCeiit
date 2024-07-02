@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Outlet, Link } from 'react-router-dom';
 import { AppBar, Toolbar, IconButton, Typography, Drawer, List, ListItem, ListItemIcon, ListItemText, CssBaseline, Divider, Box } from '@mui/material';
 import { Menu as MenuIcon, ChevronLeft as ChevronLeftIcon, Home as HomeIcon, ExitToApp as ExitToAppIcon } from '@mui/icons-material';
-import './Home.css';
 
 const drawerWidth = 240;
 
-const Home = ({ username, onLogout }) => {
+const Layout = ({ username, onLogout }) => {
   const [open, setOpen] = useState(false);
 
   const handleDrawerOpen = () => {
@@ -55,6 +54,7 @@ const Home = ({ username, onLogout }) => {
         </div>
         <Divider />
         <List>
+            <br />
           <ListItem button component={Link} to="/objects">
             <ListItemIcon><HomeIcon /></ListItemIcon>
             <ListItemText primary="Objetos" />
@@ -87,17 +87,11 @@ const Home = ({ username, onLogout }) => {
           marginLeft: 0,
         }) }}
       >
-        <div className="home-content">
-          <h2>Gestión de</h2>
-          <ul className="home-links">
-            <li><Link to="/objects" className="home-link">Objetos</Link></li>
-            <li><Link to="/loans" className="home-link">Préstamos</Link></li>
-            <li><Link to="/users" className="home-link">Usuarios</Link></li>
-          </ul>
-        </div>
+        <Toolbar />
+        <Outlet />
       </Box>
     </Box>
   );
 };
 
-export default Home;
+export default Layout;

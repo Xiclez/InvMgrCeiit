@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Login from './components/Login';
+import Layout from './components/Layout';
 import Home from './components/Home';
 import ObjectsCrud from './components/ObjectsCrud';
 import LoansCrud from './components/LoansCrud';
@@ -40,10 +41,12 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home username={username} onLogout={handleLogout} />} />
-        <Route path="/objects" element={<ObjectsCrud token={token} />} />
-        <Route path="/loans" element={<LoansCrud token={token} />} />
-        <Route path="/users" element={<UsersCrud token={token} />} />
+        <Route path="/" element={<Layout username={username} onLogout={handleLogout} />}>
+          <Route index element={<Home />} />
+          <Route path="objects" element={<ObjectsCrud token={token} />} />
+          <Route path="loans" element={<LoansCrud token={token} />} />
+          <Route path="users" element={<UsersCrud token={token} />} />
+        </Route>
       </Routes>
     </Router>
   );
