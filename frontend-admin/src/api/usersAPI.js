@@ -9,6 +9,19 @@ export const getAllUsers = async (token) => {
   return response.data.usuarios || []; // Ajusta según la estructura de la respuesta del backend
 };
 
+export const getUserDetails = async (userId) => {
+  try {
+    const response = await axios.get(`${API_URL}/buscar_usuario`, {
+      params: { id: userId }
+    });
+    console.log('getUserDetails response:', response.data); // Log para depurar
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    return null;
+  }
+};
+
 export const addUser = async (newUser, token) => {
   const response = await axios.post(`${API_URL}/registrar`, {
     usrn: newUser.username,

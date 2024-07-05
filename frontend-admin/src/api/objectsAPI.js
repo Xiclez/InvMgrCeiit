@@ -10,6 +10,19 @@ const getConfig = (token) => ({
   },
 });
 
+export const getObjectDetails = async (objectId) => {
+  try {
+    const response = await axios.get(`${API_URL}/searchObject`, {
+      params: { id: objectId }
+    });
+    console.log('getObjectDetails response:', response.data); // Log para depurar
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching object details:', error);
+    return null;
+  }
+};
+
 export const uploadImageToCloudinary = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
