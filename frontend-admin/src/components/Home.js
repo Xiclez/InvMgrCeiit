@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { AppBar, Toolbar, IconButton, Typography, Drawer, List, ListItem, ListItemIcon, ListItemText, CssBaseline, Divider, Box } from '@mui/material';
 import { Menu as MenuIcon, ChevronLeft as ChevronLeftIcon, Home as HomeIcon, ExitToApp as ExitToAppIcon } from '@mui/icons-material';
 import './Home.css';
+import logo from '../assets/logoInvMgr.png'; // Adjust the import path as needed
 
 const drawerWidth = 240;
 
@@ -53,6 +54,7 @@ const Home = ({ username, onLogout }) => {
             <ChevronLeftIcon />
           </IconButton>
         </div>
+        <img src={logo} alt="Logo" className="logo-image" />
         <Divider />
         <List>
           <ListItem button component={Link} to="/objects">
@@ -66,6 +68,11 @@ const Home = ({ username, onLogout }) => {
           <ListItem button component={Link} to="/users">
             <ListItemIcon><HomeIcon /></ListItemIcon>
             <ListItemText primary="Usuarios" />
+          </ListItem>
+          <Divider />
+          <ListItem button component={Link} to="/logs">
+            <ListItemIcon><HomeIcon /></ListItemIcon>
+            <ListItemText primary="Logs" />
           </ListItem>
           <Divider />
           <ListItem button onClick={onLogout}>
@@ -88,11 +95,14 @@ const Home = ({ username, onLogout }) => {
         }) }}
       >
         <div className="home-content">
+          <img src={logo} alt="Logo" className="top-center-logo" />
           <h2>Gestión de</h2>
           <ul className="home-links">
             <li><Link to="/objects" className="home-link">Objetos</Link></li>
             <li><Link to="/loans" className="home-link">Préstamos</Link></li>
             <li><Link to="/users" className="home-link">Usuarios</Link></li>
+                        <li><Link to="/logs" className="home-link">logs</Link></li>
+
           </ul>
         </div>
       </Box>

@@ -41,3 +41,20 @@
 .logout-button:hover {
   text-decoration: underline;
 }
+
+.home-content {
+  text-align: center;
+}
+
+.top-center-logo {
+  display: block;
+  margin: 0 auto;
+  max-width: 150px; /* Adjust the size as needed */
+  margin-bottom: 20px; /* Adjust spacing as needed */
+}
+
+.logo-image {
+  display: block;
+  margin: 20px auto;
+  max-width: 80%;
+}

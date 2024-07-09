@@ -1,14 +1,10 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import Modal from "react-modal";
+import { useNavigate } from 'react-router-dom';
 import QRCode from "qrcode.react";
 import {
   getAllObjects,
-  addObject,
-  updateObject,
-  deleteObject,
-  readObject,
-  uploadImageToCloudinary,
+  deleteObject
 } from "../api/objectsAPI";
 import {
   Container,
@@ -21,27 +17,21 @@ import {
   Select,
   MenuItem,
   FormControl,
-  InputLabel,
-  TextField,
-  Checkbox,
-  FormControlLabel,
+  InputLabel
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-
-Modal.setAppElement("#root");
 
 const ObjectsCrud = ({ token }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [limit, setLimit] = useState(20);
   const [page, setPage] = useState(0);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
-  const [newObject, setNewObject] = useState({ NOMBRE: "", Lugar: "", imgURL: "" });
-  const [qrCodeId, setQrCodeId] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const [manualUrl, setManualUrl] = useState(false);
+  const [place, setPlace] = useState("");
+  const [totalObjects, setTotalObjects] = useState(0);
+  const [newObjectsThisMonth, setNewObjectsThisMonth] = useState(0);
+  const [joke, setJoke] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,6 +39,9 @@ const ObjectsCrud = ({ token }) => {
         const objs = await getAllObjects(token);
         setData(objs);
         setLoading(false);
+        setTotalObjects(objs.length);
+        const currentMonth = new Date().getMonth();
+        setNewObjectsThisMonth(objs.filter(item => new Date(item.dateAdded).getMonth() === currentMonth).length);
       } catch (error) {
         console.error("There was an error fetching the data!", error);
         setLoading(false);
@@ -56,6 +49,18 @@ const ObjectsCrud = ({ token }) => {
     };
     fetchData();
   }, [token]);
+
+  useEffect(() => {
+    const fetchJoke = async () => {
+      try {
+        const response = await axios.get("https://official-joke-api.appspot.com/random_joke");
+        setJoke(response.data.setup + " " + response.data.punchline);
+      } catch (error) {
+        console.error("There was an error fetching the joke!", error);
+      }
+    };
+    fetchJoke();
+  }, []);
 
   const handleLimitChange = (event) => {
     setLimit(event.target.value);
@@ -74,37 +79,6 @@ const ObjectsCrud = ({ token }) => {
   const endIndex = startIndex + limit;
   const currentPageData = data.slice(startIndex, endIndex);
 
-  const handleImageUpload = async (file) => {
-    setUploading(true);
-    try {
-      const response = await uploadImageToCloudinary(file);
-      console.log('Response from Cloudinary:', response); // Debugging line
-      if (response && response.secure_url) {
-        setNewObject((prevObject) => ({ ...prevObject, imgURL: response.secure_url }));
-      } else {
-        console.error("No se pudo obtener la URL segura de la respuesta de Cloudinary.");
-      }
-    } catch (error) {
-      console.error("Error uploading image", error);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleAddObject = async () => {
-    try {
-      const response = await addObject(newObject, token);
-      setNewObject({ NOMBRE: "", Lugar: "", imgURL: "" });
-      setIsModalOpen(false);
-      setQrCodeId(response.obj._id); // Set the QR code ID
-      setIsQrModalOpen(true); // Open the QR modal
-      const objs = await getAllObjects(token);
-      setData(objs);
-    } catch (error) {
-      console.error("Error al agregar objeto", error);
-    }
-  };
-
   const handleDeleteObject = async (objectId) => {
     const confirmed = window.confirm("¿Estás seguro de que deseas eliminar este objeto?");
     if (confirmed) {
@@ -116,19 +90,6 @@ const ObjectsCrud = ({ token }) => {
         console.error("Error al eliminar objeto", error);
       }
     }
-  };
-
-  const downloadQRCode = () => {
-    const canvas = document.getElementById("qrCode");
-    const pngUrl = canvas
-      .toDataURL("image/png")
-      .replace("image/png", "image/octet-stream");
-    let downloadLink = document.createElement("a");
-    downloadLink.href = pngUrl;
-    downloadLink.download = `${qrCodeId}.png`;
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
   };
 
   if (loading) {
@@ -150,32 +111,40 @@ const ObjectsCrud = ({ token }) => {
         <Grid item xs={12} sm={6} md={3}>
           <Paper>
             <Box p={2}>
-              <Typography variant="h6">10 Categories</Typography>
-              <Typography variant="subtitle2">2 more than last year</Typography>
+              <FormControl fullWidth>
+                <InputLabel>Lugar</InputLabel>
+                <Select value={place} onChange={(e) => setPlace(e.target.value)} label="Lugar">
+                  {Array.from(new Set(data.map(item => item.Lugar))).map(lugar => (
+                    <MenuItem key={lugar} value={lugar}>{lugar}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Typography variant="h6">{place ? data.filter(item => item.Lugar === place).length : 0} Objects Available</Typography>
             </Box>
           </Paper>
         </Grid>
+
         <Grid item xs={12} sm={6} md={3}>
           <Paper>
             <Box p={2}>
-              <Typography variant="h6">300 Total items</Typography>
-              <Typography variant="subtitle2">10 more than last year</Typography>
+              <Typography variant="h6">{totalObjects} Total Objects Available</Typography>
             </Box>
           </Paper>
         </Grid>
+
         <Grid item xs={12} sm={6} md={3}>
           <Paper>
             <Box p={2}>
-              <Typography variant="h6">₦250,000,000 Total item cost</Typography>
-              <Typography variant="subtitle2">2.5% less than last year</Typography>
+              <Typography variant="h6">{newObjectsThisMonth} New Objects Added This Month</Typography>
             </Box>
           </Paper>
         </Grid>
+
         <Grid item xs={12} sm={6} md={3}>
           <Paper>
             <Box p={2}>
-              <Typography variant="h6">20 Total suppliers</Typography>
-              <Typography variant="subtitle2">2 more than last week</Typography>
+              <Typography variant="h6">Interactive Card</Typography>
+              <Typography variant="subtitle1">{joke}</Typography>
             </Box>
           </Paper>
         </Grid>
@@ -183,7 +152,7 @@ const ObjectsCrud = ({ token }) => {
         <Grid item xs={12}>
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="h6">Update Inventory Table</Typography>
-            <Button variant="contained" color="primary" onClick={() => setIsModalOpen(true)}>
+            <Button variant="contained" color="primary" onClick={() => navigate('/add-new-item')}>
               Update Inventory
             </Button>
           </Box>
@@ -250,103 +219,6 @@ const ObjectsCrud = ({ token }) => {
           </Box>
         </Grid>
       </Grid>
-
-      <Modal
-        isOpen={isModalOpen}
-        onRequestClose={() => setIsModalOpen(false)}
-        contentLabel="Agregar Objeto"
-        className="modal"
-        overlayClassName="overlay"
-      >
-        <h2>Agregar Objeto</h2>
-        <div className="input-group">
-          <TextField
-            fullWidth
-            label="Nombre"
-            value={newObject.NOMBRE}
-            onChange={(e) => setNewObject({ ...newObject, NOMBRE: e.target.value })}
-            variant="outlined"
-            margin="normal"
-            InputLabelProps={{
-              style: { color: 'black' },
-            }}
-          />
-          <TextField
-            fullWidth
-            label="Lugar"
-            value={newObject.Lugar}
-            onChange={(e) => setNewObject({ ...newObject, Lugar: e.target.value })}
-            variant="outlined"
-            margin="normal"
-            InputLabelProps={{
-              style: { color: 'black' },
-            }}
-          />
-          <TextField
-            fullWidth
-            label="Image URL"
-            value={newObject.imgURL}
-            InputProps={{
-              readOnly: !manualUrl,
-            }}
-            onChange={(e) => setNewObject({ ...newObject, imgURL: e.target.value })}
-            variant="outlined"
-            margin="normal"
-            InputLabelProps={{
-              style: { color: 'black' },
-            }}
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={manualUrl}
-                onChange={(e) => setManualUrl(e.target.checked)}
-              />
-            }
-            label="Introducir URL manualmente"
-            style={{ marginTop: '15px' }}
-          />
-          {!manualUrl && (
-            <div>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleImageUpload(e.target.files[0])}
-                style={{ marginTop: '15px' }}
-              />
-              {uploading && <CircularProgress style={{ marginTop: '15px' }} />}
-            </div>
-          )}
-          <Button
-            onClick={handleAddObject}
-            variant="contained"
-            color="primary"
-            style={{ marginTop: '15px' }}
-            disabled={uploading || (!newObject.imgURL && !manualUrl)}
-          >
-            Agregar
-          </Button>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={isQrModalOpen}
-        onRequestClose={() => setIsQrModalOpen(false)}
-        contentLabel="Código QR"
-        className="modal"
-        overlayClassName="overlay"
-      >
-        <h2>Código QR Generado</h2>
-        <div className="qr-code-container">
-          <QRCode id="qrCode" value={qrCodeId} size={256} level={"H"} includeMargin={true} />
-        </div>
-        <Button onClick={downloadQRCode} variant="contained" color="primary" style={{ marginTop: '15px' }}>
-          Descargar QR
-        </Button>
-        <Button onClick={() => window.print()} variant="contained" color="primary" style={{ marginTop: '15px' }}>
-          Imprimir QR
-        </Button>
-      </Modal>
     </Container>
   );
 };

@@ -1,26 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Grid, Paper, Typography, Box, Button, TextField, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, InputAdornment, List, ListItem, ListItemText, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
-import { getAllLoans, addLoan, updateLoan, deleteLoan, readLoan } from '../api/LoansAPI'; 
-import { getAllUsers, getUserDetails } from '../api/usersAPI';
-import { getAllObjects, getObjectDetails } from '../api/objectsAPI'; 
+import { useNavigate } from 'react-router-dom';
+import { Container, Grid, Paper, Typography, Box, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Button, TextField } from '@mui/material';
+import { getAllLoans, deleteLoan, readLoan, updateLoan } from '../api/LoansAPI'; 
+import { getUserDetails } from '../api/usersAPI';
+import { getObjectDetails } from '../api/objectsAPI'; 
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
-import CameraAltIcon from '@mui/icons-material/CameraAlt';
-import { QrReader } from 'react-qr-reader';
 import axios from 'axios';
 import './Crud.css';
 
 const LoansCrud = ({ token }) => {
   const [loans, setLoans] = useState([]);
-  const [newLoan, setNewLoan] = useState({ userId: '', ceiitId: '', dueDate: '' });
-  const [userSearch, setUserSearch] = useState('');
-  const [objectSearch, setObjectSearch] = useState('');
-  const [userResults, setUserResults] = useState([]);
-  const [objectResults, setObjectResults] = useState([]);
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isQrReaderOpen, setIsQrReaderOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadLoans();
@@ -29,17 +22,12 @@ const LoansCrud = ({ token }) => {
   const loadLoans = async () => {
     try {
       const response = await getAllLoans(token);
-      console.log('API Response:', response); // Log para depurar
       const loansData = response.obj || [];
-      console.log('Loans data:', loansData); // Log para depurar
 
       const detailedLoans = await Promise.all(loansData.map(async (loan) => {
-        console.log('Processing loan:', loan); // Log para depurar
         try {
           const userResponse = await getUserDetails(loan.nameUser);
           const objectResponse = await getObjectDetails(loan.nameObj);
-          console.log('User fetched:', userResponse); // Log para depurar
-          console.log('Object fetched:', objectResponse); // Log para depurar
 
           const user = userResponse && userResponse.usuarios ? userResponse.usuarios.find(u => u._id === loan.nameUser) : null;
           const object = objectResponse;
@@ -57,67 +45,13 @@ const LoansCrud = ({ token }) => {
           return loan;
         }
       }));
-      console.log('Detailed Loans:', detailedLoans); // Log para depurar
+
       setLoans(detailedLoans);
     } catch (error) {
       console.error('Error al cargar préstamos', error);
       setLoans([]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleUserSearch = async () => {
-    if (userSearch.trim()) {
-      const results = await getAllUsers(token);
-      setUserResults(results.filter(user => 
-        (user.name && user.name.includes(userSearch)) || 
-        (user.surName && user.surName.includes(userSearch)) || 
-        (user.tuition && user.tuition.toString().includes(userSearch))
-      ));
-    }
-  };
-
-  const handleObjectSearch = async () => {
-    if (objectSearch.trim()) {
-      const results = await getAllObjects(token);
-      setObjectResults(results.filter(object => 
-        object.NOMBRE.includes(objectSearch) && object.isAvailable
-      ));
-    }
-  };
-
-  const handleSelectUser = (user) => {
-    setNewLoan({ ...newLoan, userId: user._id });
-    setUserSearch(`${user.name} ${user.surName} (${user.tuition})`);
-    setUserResults([]);
-  };
-
-  const handleSelectObject = (object) => {
-    setNewLoan({ ...newLoan, ceiitId: object._id });
-    setObjectSearch(object.NOMBRE);
-    setObjectResults([]);
-  };
-
-  const handleAddLoan = async () => {
-    try {
-      await addLoan(newLoan, token);
-      setNewLoan({ userId: '', ceiitId: '', dueDate: '' });
-      loadLoans();
-    } catch (error) {
-      console.error('Error al agregar préstamo', error);
-    }
-  };
-
-  const handleUpdateLoan = async () => {
-    if (selectedLoan) {
-      try {
-        await updateLoan(selectedLoan, token);
-        setSelectedLoan(null);
-        loadLoans();
-      } catch (error) {
-        console.error('Error al actualizar préstamo', error);
-      }
     }
   };
 
@@ -153,21 +87,20 @@ const LoansCrud = ({ token }) => {
     }
   };
 
-  const handleScanQR = async (data) => {
-    if (data) {
-      setIsQrReaderOpen(false);
+  const handleUpdateLoan = async () => {
+    if (selectedLoan) {
       try {
-        const object = await getObjectDetails(data);
-        if (!object.isAvailable) {
-          alert("Este objeto se encuentra bajo prestamo, por favor cierra el prestamo activo");
-        } else {
-          setNewLoan({ ...newLoan, ceiitId: data });
-          setObjectSearch(object.NOMBRE);
-        }
+        await updateLoan(selectedLoan, token);
+        setSelectedLoan(null);
+        loadLoans();
       } catch (error) {
-        console.error('Error fetching object details:', error);
+        console.error('Error al actualizar préstamo', error);
       }
     }
+  };
+
+  const handleNavigateToAddLoan = () => {
+    navigate('/add-new-loan');
   };
 
   if (loading) {
@@ -185,76 +118,36 @@ const LoansCrud = ({ token }) => {
             Gestión de préstamos
           </Typography>
         </Grid>
-        <Grid item xs={12}>
+        
+        <Grid item xs={12} sm={6} md={3}>
           <Paper>
             <Box p={2}>
-              <Typography variant="h6">Agregar Préstamo</Typography>
-              <div className="input-group">
-                <TextField
-                  fullWidth
-                  label="Borrower"
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  onBlur={handleUserSearch}
-                  variant="outlined"
-                  margin="normal"
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton onClick={handleUserSearch}>
-                          <SearchIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <List>
-                  {userResults.map(user => (
-                    <ListItem button onClick={() => handleSelectUser(user)} key={user._id}>
-                      <ListItemText primary={`${user.name} ${user.surName} (${user.tuition})`} />
-                    </ListItem>
-                  ))}
-                </List>
-
-                <TextField
-                  fullWidth
-                  label="Item"
-                  value={objectSearch}
-                  onChange={(e) => setObjectSearch(e.target.value)}
-                  onBlur={handleObjectSearch}
-                  variant="outlined"
-                  margin="normal"
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton onClick={handleObjectSearch}>
-                          <SearchIcon />
-                        </IconButton>
-                        <IconButton onClick={() => setIsQrReaderOpen(true)}>
-                          <CameraAltIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <List>
-                  {objectResults.map(object => (
-                    <ListItem button onClick={() => handleSelectObject(object)} key={object._id}>
-                      <ListItemText primary={object.NOMBRE} />
-                    </ListItem>
-                  ))}
-                </List>
-                <Button onClick={handleAddLoan} variant="contained" color="primary" style={{ marginTop: '15px' }}>
-                  Agregar
-                </Button>
-              </div>
+              <Typography variant="h6">Préstamos Activos</Typography>
+              <Typography variant="subtitle2">{loans.filter(loan => loan.status).length}</Typography>
             </Box>
           </Paper>
         </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper>
+            <Box p={2}>
+              <Typography variant="h6">Préstamos del Mes</Typography>
+              <Typography variant="subtitle2">{loans.filter(loan => new Date(loan.date).getMonth() === new Date().getMonth()).length}</Typography>
+            </Box>
+          </Paper>
+        </Grid>
+        
+        <Grid item xs={12}>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6">Lista de Préstamos</Typography>
+            <Button variant="contained" color="primary" onClick={handleNavigateToAddLoan}>
+              Agregar Préstamo
+            </Button>
+          </Box>
+        </Grid>
+        
         <Grid item xs={12}>
           <Paper>
             <Box p={2}>
-              <Typography variant="h6">Lista de Préstamos</Typography>
               <TableContainer component={Paper}>
                 <Table>
                   <TableHead>
@@ -346,32 +239,6 @@ const LoansCrud = ({ token }) => {
           </Grid>
         )}
       </Grid>
-
-      <Dialog open={isQrReaderOpen} onClose={() => setIsQrReaderOpen(false)}>
-        <DialogTitle>Escanea el QR del objeto</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Asegúrate de que el código QR del objeto esté visible en la cámara.
-          </DialogContentText>
-          <QrReader
-            onResult={(result, error) => {
-              if (!!result) {
-                handleScanQR(result?.text);
-              }
-
-              if (!!error) {
-                console.info(error);
-              }
-            }}
-            style={{ width: '100%' }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsQrReaderOpen(false)} color="primary">
-            Cancelar
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Container>
   );
 };
