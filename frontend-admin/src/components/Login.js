@@ -18,19 +18,21 @@ const Login = ({ setToken, setUsername }) => {
         usrn: username,
         password: password,
       });
-      const token = response.data.token;
-      const user = response.data.obj.username;
-      const role = response.data.obj.role;
-      
-      if (role === 'Usuario') {
-        setError('Tu cuenta no está autorizada para acceder a este recurso. Por favor contacta al Administrador');
-        return;
+
+      console.log('Server response:', response.data); // Log the entire response
+
+      if (!response.data || !response.data.jwt) {
+        throw new Error('Invalid response from server');
       }
-      
+
+      const token = response.data.jwt;
+
+      // Assuming the user information is encoded in the token or another endpoint is used to fetch user details
       setToken(token);
-      setUsername(user);
+      setUsername(username); // Set the username from input as the response doesn't include it
+
       localStorage.setItem('token', token);
-      localStorage.setItem('username', user);
+      localStorage.setItem('username', username);
       setError('');
     } catch (error) {
       console.error('Error al iniciar sesión', error);

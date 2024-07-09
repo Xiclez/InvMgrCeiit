@@ -24,7 +24,7 @@ import {
   InputLabel,
   TextField,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -352,4 +352,3 @@ const ObjectsCrud = ({ token }) => {
 };
 
 export default ObjectsCrud;
-

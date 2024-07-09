@@ -38,9 +38,15 @@ export const uploadImageToCloudinary = async (file) => {
 };
 
 export const getAllObjects = async (token) => {
-  const response = await axios.get(`${API_URL}/getAllObjects`, {}, getConfig(token));
+  const config = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+  const response = await axios.get(`${API_URL}/getAllObjects`, config);
   return response.data.objs;
 };
+
 
 export const addObject = async (newObject, token) => {
   const response = await axios.post(`${API_URL}/addObject`, {
