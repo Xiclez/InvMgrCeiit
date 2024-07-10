@@ -60,9 +60,8 @@ const App: React.FC = () => {
     <NavigationContainer>
       <Tab.Navigator>
         <Tab.Screen name="Objetos" component={ObjectStack} />
-        {role === 'Desarrollador' && <Tab.Screen name="Scanner" component={ScannerStack} />}
-        <Tab.Screen name="Prestamos">
-          {props => <PrestamosScreen {...props} role={role} userId={userId} />}
+        <Tab.Screen name="Scanner" component={ScannerStack} />
+        <Tab.Screen name="Prestamos" component={PrestamosScreen}>
         </Tab.Screen>
       </Tab.Navigator>
     </NavigationContainer>
