@@ -1,49 +1,61 @@
-// components/Login.tsx
 import React, { useState } from 'react';
+import axios from 'axios';
 import { View, Text, TextInput, Button, Alert, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
+import logo1 from '../assets/logo.png';
+import logo2 from '../assets/logoInvMgr.png';
 
 interface LoginProps {
-  onLogin: (role: string, id: string) => void;
+  onLogin: (token: string, username: string) => void;
 }
+
+const API_URL = 'http://ulsaceiit.xyz/users';
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
 
   const handleLogin = async () => {
     try {
-      const response = await fetch('http://ulsaceiit.xyz/users/iniciar_sesion', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ usrn: username, password }),
+      const response = await axios.post(`${API_URL}/iniciar_sesion`, {
+        usrn: username,
+        password: password,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        Alert.alert('Login failed', errorData.mensaje || 'An error occurred');
-        return;
+      console.log('Server response:', response.data); // Log the entire response
+
+      if (!response.data || !response.data.jwt) {
+        throw new Error('Invalid response from server');
       }
 
-      const data = await response.json();
-      onLogin(data.obj.role, data.obj._id);
+      const token = response.data.jwt;
+      onLogin(token, username); // Set the username from input as the response doesn't include it
+
+      // Set token and username in local storage
+      // You may need to implement this differently depending on your application requirements
+      localStorage.setItem('token', token);
+      localStorage.setItem('username', username);
+      setError('');
     } catch (error) {
-      Alert.alert('Login failed', 'An error occurred');
+      console.error('Error al iniciar sesión', error);
+      setError('Usuario o contraseña incorrectos');
     }
   };
 
   return (
     <LinearGradient colors={['#6dd5ed', '#2193b0']} style={styles.gradient}>
       <View style={styles.container}>
-        <Image source={require('../assets/logoInvMgr.png')} style={styles.image} />
+        <View style={styles.logoContainer}>
+          <Image source={logo1} style={styles.logo} />
+          <Image source={logo2} style={styles.logo} />
+        </View>
         <Text style={styles.title}>ULSA CEIIT</Text>
         <Text style={styles.subtitle}>Sign in to continue</Text>
         <TextInput
-          placeholder="Username"
+          placeholder="Username or email"
           value={username}
           onChangeText={setUsername}
           style={styles.input}
@@ -66,9 +78,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <Text style={styles.buttonText}>SIGN IN</Text>
           <Icon name="arrow-forward" size={20} color="#fff" />
         </TouchableOpacity>
+        {error ? <Text style={styles.errorMessage}>{error}</Text> : null}
         <TouchableOpacity onPress={() => Alert.alert('Forgot Password', 'Forgot Password pressed')}>
           <Text style={styles.forgotPassword}>Forgot Password?</Text>
         </TouchableOpacity>
+        <Text style={styles.signupPrompt}>Don't have an account? <TouchableOpacity><Text style={styles.signupLink}>Sign up</Text></TouchableOpacity></Text>
       </View>
     </LinearGradient>
   );
@@ -84,10 +98,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  image: {
-    width: 200,
-    height: 200,
+  logoContainer: {
+    flexDirection: 'row',
     marginBottom: 20,
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    marginHorizontal: 10,
   },
   title: {
     fontSize: 24,
@@ -138,9 +156,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginRight: 10,
   },
+  errorMessage: {
+    color: 'red',
+    marginBottom: 10,
+  },
   forgotPassword: {
     color: '#fff',
     fontSize: 14,
+    marginBottom: 20,
+  },
+  signupPrompt: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  signupLink: {
+    color: '#fff',
+    textDecorationLine: 'underline',
   },
 });
 

@@ -9,8 +9,14 @@ const ObjectScreen = ({ navigation }) => {
 
   const fetchObjects = async () => {
     try {
+      const token = localStorage.getItem('token'); // Retrieve the token from local storage
       console.log('Fetching objects...');
-      const response = await fetch('http://ulsaceiit.xyz/ulsa/getAllObjects');
+      const response = await fetch('http://ulsaceiit.xyz/ulsa/getAllObjects', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
       const data = await response.json();
       console.log('Response from server:', data);
       if (data.objs) {

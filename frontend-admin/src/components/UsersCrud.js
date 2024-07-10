@@ -1,86 +1,65 @@
 import React, { useState, useEffect } from 'react';
-import Modal from 'react-modal';
+import { useNavigate } from 'react-router-dom';
 import {
-  getAllUsers,
-  addUser,
-  updateUser,
-  deleteUser,
-  readUser
-} from '../api/usersAPI';
-import './Crud.css';
-
-Modal.setAppElement('#root');
+  Container,
+  Grid,
+  Paper,
+  Typography,
+  Box,
+  Button,
+  CircularProgress,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  TextField,
+  InputAdornment,
+  IconButton,
+} from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
+import { getAllUsers, deleteUser, readUser } from '../api/usersAPI';
 
 const UsersCrud = ({ token }) => {
   const [users, setUsers] = useState([]);
-  const [newUser, setNewUser] = useState({ username: '', password: '', tuition: '', name: '', surName: '', role: 'Usuario' });
   const [selectedUser, setSelectedUser] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [resultsPerPage, setResultsPerPage] = useState(10);
+  const [loading, setLoading] = useState(true);
+  const [limit, setLimit] = useState(20);
+  const [page, setPage] = useState(0);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [newUsersThisMonth, setNewUsersThisMonth] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch all users when the component mounts
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       try {
         const users = await getAllUsers(token);
         setUsers(users);
+        setTotalUsers(users.length);
+        const currentMonth = new Date().getMonth();
+        setNewUsersThisMonth(users.filter(user => new Date(user.dateAdded).getMonth() === currentMonth).length);
+        setLoading(false);
       } catch (error) {
         console.error('Error al obtener usuarios', error);
+        setLoading(false);
       }
     };
 
-    fetchUsers();
+    fetchData();
   }, [token]);
-
-  const handleAddUser = async () => {
-    try {
-      const response = await addUser(newUser, token);
-      setNewUser({ username: '', password: '', tuition: '', name: '', surName: '', role: 'Usuario' });
-      setIsModalOpen(false);
-      if (searchQuery) {
-        handleSearch(searchQuery);
-      } else {
-        // Refresh the users list after adding a new user
-        const users = await getAllUsers(token);
-        setUsers(users);
-      }
-    } catch (error) {
-      console.error('Error al agregar usuario', error);
-    }
-  };
-
-  const handleUpdateUser = async () => {
-    if (selectedUser) {
-      try {
-        await updateUser(selectedUser, token);
-        setSelectedUser(null);
-        if (searchQuery) {
-          handleSearch(searchQuery);
-        } else {
-          // Refresh the users list after updating a user
-          const users = await getAllUsers(token);
-          setUsers(users);
-        }
-      } catch (error) {
-        console.error('Error al actualizar usuario', error);
-      }
-    }
-  };
 
   const handleDeleteUser = async (userId) => {
     const confirmed = window.confirm('¿Estás seguro de que deseas eliminar este usuario?');
     if (confirmed) {
       try {
         await deleteUser(userId, token);
-        if (searchQuery) {
-          handleSearch(searchQuery);
-        } else {
-          // Refresh the users list after deleting a user
-          const users = await getAllUsers(token);
-          setUsers(users);
-        }
+        const users = await getAllUsers(token);
+        setUsers(users);
+        setTotalUsers(users.length);
+        const currentMonth = new Date().getMonth();
+        setNewUsersThisMonth(users.filter(user => new Date(user.dateAdded).getMonth() === currentMonth).length);
       } catch (error) {
         console.error('Error al eliminar usuario', error);
       }
@@ -98,197 +77,167 @@ const UsersCrud = ({ token }) => {
 
   const handleSearch = async (query) => {
     setSearchQuery(query);
-    setCurrentPage(1);  // Reset to first page on new search
+    setPage(0);
     if (query.trim() === '') {
-      setUsers([]);
+      const users = await getAllUsers(token);
+      setUsers(users);
     } else {
-      try {
-        const users = await getAllUsers(token);
-        const lowerQuery = query.toLowerCase();
-        const filteredUsers = users.filter((user) =>
-          (user.username && user.username.toLowerCase().includes(lowerQuery)) ||
-          (user.name && user.name.toLowerCase().includes(lowerQuery)) ||
-          (user.surName && user.surName.toLowerCase().includes(lowerQuery)) ||
-          (user.tuition && user.tuition.toString().includes(lowerQuery)) ||
-          (user.role && user.role.toLowerCase().includes(lowerQuery))
-        );
-        setUsers(filteredUsers);
-      } catch (error) {
-        console.error('Error al buscar usuarios', error);
-        setUsers([]);
-      }
+      const users = await getAllUsers(token);
+      const lowerQuery = query.toLowerCase();
+      const filteredUsers = users.filter((user) =>
+        (user.username && user.username.toLowerCase().includes(lowerQuery)) ||
+        (user.name && user.name.toLowerCase().includes(lowerQuery)) ||
+        (user.surName && user.surName.toLowerCase().includes(lowerQuery)) ||
+        (user.tuition && user.tuition.toString().includes(lowerQuery)) ||
+        (user.role && user.role.toLowerCase().includes(lowerQuery))
+      );
+      setUsers(filteredUsers);
     }
   };
 
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+  const handleLimitChange = (event) => {
+    setLimit(event.target.value);
+    setPage(0);
   };
 
-  const handleResultsPerPageChange = (e) => {
-    setResultsPerPage(Number(e.target.value));
-    setCurrentPage(1);  // Reset to first page on change
+  const handlePrevPage = () => {
+    setPage((prev) => Math.max(prev - 1, 0));
   };
 
-  // Logic for displaying current users
-  const indexOfLastUser = currentPage * resultsPerPage;
-  const indexOfFirstUser = indexOfLastUser - resultsPerPage;
-  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(users.length / resultsPerPage);
+  const handleNextPage = () => {
+    setPage((prev) => prev + 1);
+  };
+
+  const startIndex = page * limit;
+  const endIndex = startIndex + limit;
+  const currentPageData = users.slice(startIndex, endIndex);
+
+  if (loading) {
+    return <CircularProgress />;
+  }
 
   return (
-    <div className="container">
-      <div className="search-bar">
-        <h2>Buscar Usuarios</h2>
-        <input
-          type="text"
-          placeholder="Buscar por nombre, apellido, matrícula o usuario"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <button onClick={() => handleSearch(searchQuery)} className="crud-button">Buscar</button>
-        <button onClick={() => setIsModalOpen(true)} className="crud-button">Agregar Usuario</button>
-      </div>
-      <table className="crud-table">
-        <thead>
-          <tr>
-            <th>Usuario</th>
-            <th>Matrícula</th>
-            <th>Nombre</th>
-            <th>Apellido</th>
-            <th>Rol</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {currentUsers.length > 0 ? (
-            currentUsers.map((user) => (
-              <tr key={user._id}>
-                <td>{user.username}</td>
-                <td>{user.tuition}</td>
-                <td>{user.name}</td>
-                <td>{user.surName}</td>
-                <td>{user.role}</td>
-                <td>
-                  <button onClick={() => handleReadUser(user._id)} className="crud-button">✏️</button>
-                  <button onClick={() => handleDeleteUser(user._id)} className="crud-button">🗑️</button>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="7">No se encontraron usuarios.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-      <div className="pagination">
-        {[...Array(totalPages)].map((_, i) => (
-          <button
-            key={i + 1}
-            onClick={() => handlePageChange(i + 1)}
-            className={`page-button ${currentPage === i + 1 ? 'active' : ''}`}
-          >
-            {i + 1}
-          </button>
-        ))}
-      </div>
-      <Modal
-        isOpen={isModalOpen}
-        onRequestClose={() => setIsModalOpen(false)}
-        contentLabel="Agregar Usuario"
-        className="modal"
-        overlayClassName="overlay"
-      >
-        <h2>Agregar Usuario</h2>
-        <div className="input-group">
-          <input
-            type="text"
-            placeholder="Usuario"
-            value={newUser.username}
-            onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-          />
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={newUser.password}
-            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-          />
-          <input
-            type="text"
-            placeholder="Matrícula"
-            value={newUser.tuition}
-            onChange={(e) => setNewUser({ ...newUser, tuition: e.target.value })}
-          />
-          <input
-            type="text"
-            placeholder="Nombre"
-            value={newUser.name}
-            onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-          />
-          <input
-            type="text"
-            placeholder="Apellido"
-            value={newUser.surName}
-            onChange={(e) => setNewUser({ ...newUser, surName: e.target.value })}
-          />
-          <select
-            value={newUser.role}
-            onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-          >
-            <option value="Administrador">Administrador</option>
-            <option value="Desarrollador">Desarrollador</option>
-            <option value="Usuario">Usuario</option>
-          </select>
-          <button onClick={handleAddUser} className="crud-button">Agregar</button>
-        </div>
-      </Modal>
-      {selectedUser && (
-        <div className="edit-box">
-          <h2>Editar Usuario</h2>
-          <div className="input-group">
-            <input
-              type="text"
-              placeholder="Usuario"
-              value={selectedUser.username}
-              onChange={(e) => setSelectedUser({ ...selectedUser, username: e.target.value })}
+    <Container>
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Typography variant="h4" component="div" gutterBottom>
+            Users Management
+          </Typography>
+          <Typography variant="subtitle1" component="div" gutterBottom>
+            Update users table
+          </Typography>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper>
+            <Box p={2}>
+              <Typography variant="h6">{totalUsers} Total Users</Typography>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper>
+            <Box p={2}>
+              <Typography variant="h6">{newUsersThisMonth} New Users This Month</Typography>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12}>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <TextField
+              label="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(searchQuery); }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => handleSearch(searchQuery)}>
+                      <SearchIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              variant="outlined"
+              margin="normal"
+              fullWidth
             />
-            <input
-              type="password"
-              placeholder="Contraseña"
-              value={selectedUser.password}
-              onChange={(e) => setSelectedUser({ ...selectedUser, password: e.target.value })}
-            />
-            <input
-              type="text"
-              placeholder="Matrícula"
-              value={selectedUser.tuition}
-              onChange={(e) => setSelectedUser({ ...selectedUser, tuition: e.target.value })}
-            />
-            <input
-              type="text"
-              placeholder="Nombre"
-              value={selectedUser.name}
-              onChange={(e) => setSelectedUser({ ...selectedUser, name: e.target.value })}
-            />
-            <input
-              type="text"
-              placeholder="Apellido"
-              value={selectedUser.surName}
-              onChange={(e) => setSelectedUser({ ...selectedUser, surName: e.target.value })}
-            />
-            <select
-              value={selectedUser.role}
-              onChange={(e) => setSelectedUser({ ...selectedUser, role: e.target.value })}
-            >
-              <option value="Administrador">Administrador</option>
-              <option value="Desarrollador">Desarrollador</option>
-              <option value="Usuario">Usuario</option>
-            </select>
-            <button onClick={handleUpdateUser} className="crud-button">Actualizar</button>
-          </div>
-        </div>
-      )}
-    </div>
+            <Button variant="contained" color="primary" onClick={() => navigate('/add-new-user')}>
+              Add New User
+            </Button>
+          </Box>
+        </Grid>
+
+        <Grid item xs={12}>
+          <Paper>
+            <Box p={2}>
+              <Typography variant="h6">Users List</Typography>
+              <div className="table-container">
+                <table className="crud-table">
+                  <thead>
+                    <tr>
+                      <th>Username</th>
+                      <th>Tuition</th>
+                      <th>Name</th>
+                      <th>Surname</th>
+                      <th>Role</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentPageData.length > 0 ? (
+                      currentPageData.map((user, index) => (
+                        <tr key={user._id}>
+                          <td>{user.username}</td>
+                          <td>{user.tuition}</td>
+                          <td>{user.name}</td>
+                          <td>{user.surName}</td>
+                          <td>{user.role}</td>
+                          <td>
+                            <IconButton onClick={() => handleReadUser(user._id)} color="primary">
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton onClick={() => handleDeleteUser(user._id)} color="secondary">
+                              <DeleteIcon />
+                            </IconButton>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="6">No users found.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} display="flex" justifyContent="space-between" alignItems="center">
+          <FormControl variant="outlined" size="small">
+            <InputLabel>Results per page</InputLabel>
+            <Select value={limit} onChange={handleLimitChange} label="Results per page">
+              <MenuItem value={20}>20</MenuItem>
+              <MenuItem value={50}>50</MenuItem>
+              <MenuItem value={100}>100</MenuItem>
+              <MenuItem value={200}>200</MenuItem>
+            </Select>
+          </FormControl>
+          <Box>
+            <Button variant="contained" onClick={handlePrevPage} disabled={page === 0}>
+              Previous
+            </Button>
+            <Button variant="contained" onClick={handleNextPage} disabled={endIndex >= users.length}>
+              Next
+            </Button>
+          </Box>
+        </Grid>
+      </Grid>
+    </Container>
   );
 };
 

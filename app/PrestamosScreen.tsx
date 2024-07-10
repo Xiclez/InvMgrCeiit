@@ -8,13 +8,25 @@ const PrestamosScreen = () => {
 
   const fetchPrestamos = async () => {
     try {
-      const response = await fetch('http://ulsaceiit.xyz/ulsa/getAllLoans');
+      const token = localStorage.getItem('token'); // Retrieve the token from local storage
+      const response = await fetch('http://ulsaceiit.xyz/ulsa/getAllLoans', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
       const data = await response.json();
       console.log('Loans fetched:', data);
       const loans = await Promise.all(data.obj.map(async (loan) => {
         try {
-          const userResponse = await axios.get('http://ulsaceiit.xyz/users/buscar_usuario', { params: { id: loan.nameUser } });
-          const objectResponse = await axios.get(`http://ulsaceiit.xyz/ulsa/searchObject?id=${loan.nameObj}`);
+          const userResponse = await axios.get('http://ulsaceiit.xyz/users/buscar_usuario', {
+            params: { id: loan.nameUser },
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          const objectResponse = await axios.get(`http://ulsaceiit.xyz/ulsa/searchObject`, {
+            params: { id: loan.nameObj },
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
           console.log('User fetched:', userResponse.data);
           console.log('Object fetched:', objectResponse.data);
           const user = userResponse.data.usuarios.find(u => u._id === loan.nameUser);

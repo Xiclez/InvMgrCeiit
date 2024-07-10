@@ -7,6 +7,9 @@ import ObjectsCrud from './components/ObjectsCrud';
 import LoansCrud from './components/LoansCrud';
 import UsersCrud from './components/UsersCrud';
 import LogsTable from './components/LogsTable';
+import AddNewItem from './components/AddNewItem';
+import AddNewLoan from './components/AddNewLoan';
+import AddNewUser from './components/AddNewUser';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -49,6 +52,9 @@ function App() {
           <Route path="loans" element={<LoansCrud token={token} />} />
           <Route path="users" element={<UsersCrud token={token} />} />
           <Route path="logs" element={<LogsTable token={token} />} />
+          <Route path="add-new-item" element={<AddNewItem token={token} />} />
+          <Route path="add-new-loan" element={<AddNewLoan token={token} />} />
+          <Route path="add-new-user" element={<AddNewUser token={token} />} />
         </Route>
       </Routes>
     </Router>
