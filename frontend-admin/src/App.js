@@ -10,6 +10,7 @@ import LogsTable from './components/LogsTable';
 import AddNewItem from './components/AddNewItem';
 import AddNewLoan from './components/AddNewLoan';
 import AddNewUser from './components/AddNewUser';
+import ObjectLoanDetails from './components/ObjectLoanDetails'; // Import ObjectLoanDetails
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -55,6 +56,7 @@ function App() {
           <Route path="add-new-item" element={<AddNewItem token={token} />} />
           <Route path="add-new-loan" element={<AddNewLoan token={token} />} />
           <Route path="add-new-user" element={<AddNewUser token={token} />} />
+          <Route path="object-loan-details/:id" element={<ObjectLoanDetails token={token} />} /> {/* Add new route */}
         </Route>
       </Routes>
     </Router>

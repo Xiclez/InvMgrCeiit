@@ -10,6 +10,19 @@ const getConfig = (token) => ({
   },
 });
 
+export const searchObjects = async (query, token) => {
+  try {
+    const response = await axios.get(`${API_URL}/searchObject`, {
+      params: { query },
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data || [];
+  } catch (error) {
+    console.error('Error searching objects:', error);
+    throw error;
+  }
+};
+
 export const getObjectDetails = async (objectId) => {
   try {
     const response = await axios.get(`${API_URL}/searchObject`, {

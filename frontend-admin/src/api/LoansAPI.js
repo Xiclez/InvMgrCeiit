@@ -31,17 +31,22 @@ export const addLoan = async (loan, token) => {
 
 export const updateLoan = async (loan, token) => {
   try {
-    const response = await axios.post(`${API_URL}/updateLoan`, loan, getConfig(token));
-    return response.data.loan;
+    const response = await axios.put(`${API_URL}/loanUpdateObject`, loan, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return response.data.obj;
   } catch (error) {
     console.error('Error updating loan:', error);
     throw error;
   }
 };
 
+
 export const deleteLoan = async (loanId, token) => {
   try {
-    const response = await axios.post(`${API_URL}/deleteLoan`, { id: loanId }, getConfig(token));
+    const response = await axios.post(`${API_URL}/loanDeleteObject`, { loanId }, getConfig(token));
     return response.data.loan;
   } catch (error) {
     console.error('Error deleting loan:', error);
@@ -51,8 +56,12 @@ export const deleteLoan = async (loanId, token) => {
 
 export const readLoan = async (loanId, token) => {
   try {
-    const response = await axios.post(`${API_URL}/readLoan`, { id: loanId }, getConfig(token));
-    return response.data.loan;
+    const response = await axios.post(`${API_URL}/loanReadObject`, { loanId }, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return response.data.obj;
   } catch (error) {
     console.error('Error reading loan:', error);
     throw error;

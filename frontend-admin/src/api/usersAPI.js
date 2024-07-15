@@ -9,6 +9,19 @@ export const getAllUsers = async (token) => {
   return response.data.usuarios || []; // Ajusta según la estructura de la respuesta del backend
 };
 
+export const searchUsers = async (query, token) => {
+  try {
+    const response = await axios.get(`${API_URL}/buscar_usuario`, {
+      params: { query },
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data.usuarios || [];
+  } catch (error) {
+    console.error('Error searching users:', error);
+    throw error;
+  }
+};
+
 export const getUserDetails = async (userId) => {
   try {
     const response = await axios.get(`${API_URL}/buscar_usuario`, {
