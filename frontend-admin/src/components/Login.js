@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
 import logo1 from '../assets/logo.png';
 import logo2 from '../assets/logoInvMgr.png';
 
-const API_URL = 'http://ulsaceiit.xyz/users'; 
+const API_URL = 'http://ulsaceiit.xyz/users';
 
 const Login = ({ setToken, setUsername }) => {
   const [username, setLoginUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,7 +21,7 @@ const Login = ({ setToken, setUsername }) => {
         password: password,
       });
 
-      console.log('Server response:', response.data); // Log the entire response
+      console.log('Server response:', response.data);
 
       if (!response.data || !response.data.jwt) {
         throw new Error('Invalid response from server');
@@ -27,18 +29,28 @@ const Login = ({ setToken, setUsername }) => {
 
       const token = response.data.jwt;
 
-      // Assuming the user information is encoded in the token or another endpoint is used to fetch user details
       setToken(token);
-      setUsername(username); // Set the username from input as the response doesn't include it
+      setUsername(username);
 
       localStorage.setItem('token', token);
       localStorage.setItem('username', username);
+
+      // Verificar inmediatamente después de almacenar
+      const storedToken = localStorage.getItem('token');
+      console.log('Stored token:', storedToken);
+
       setError('');
+      navigate('/'); // Redirigir a la pantalla principal después de iniciar sesión exitosamente
     } catch (error) {
       console.error('Error al iniciar sesión', error);
       setError('Usuario o contraseña incorrectos');
     }
   };
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    console.log('Stored token in useEffect:', storedToken);
+  }, []);
 
   return (
     <div className="login-container">
