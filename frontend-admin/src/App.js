@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Route, Routes, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import Login from './components/Login';
 import Layout from './components/Layout';
 import Home from './components/Home';
@@ -13,7 +12,6 @@ import AddNewLoan from './components/AddNewLoan';
 import AddNewUser from './components/AddNewUser';
 import ObjectLoanDetails from './components/ObjectLoanDetails';
 
-const API_URL = 'http://ulsaceiit.xyz/auth'; // Asegúrate de que la URL sea correcta
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -22,31 +20,10 @@ function App() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkTokenValidity = async () => {
-      const storedToken = localStorage.getItem('token');
-      if (storedToken) {
-        try {
-          const response = await axios.post(`${API_URL}/verify-jwt`, {}, {
-            headers: {
-              Authorization: `Bearer ${storedToken}`
-            }
-          });
-          if (response.status === 200) {
-            setToken(storedToken);
-            return;
-          }
-        } catch (error) {
-          console.error('Token inválido o expirado', error);
-        }
-      }
-      setToken(null);
-      setUsername(null);
-      localStorage.removeItem('token');
-      localStorage.removeItem('username');
+    const storedToken = localStorage.getItem('token');
+    if (!storedToken) {
       navigate('/login');
-    };
-
-    checkTokenValidity();
+    }
   }, [navigate]);
 
   const handleLogout = () => {

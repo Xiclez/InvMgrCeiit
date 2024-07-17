@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
@@ -35,9 +35,7 @@ const Login = ({ setToken, setUsername }) => {
       localStorage.setItem('token', token);
       localStorage.setItem('username', username);
 
-      // Verificar inmediatamente después de almacenar
-      const storedToken = localStorage.getItem('token');
-      console.log('Stored token:', storedToken);
+      console.log('Stored token:', localStorage.getItem('token'));
 
       setError('');
       navigate('/'); // Redirigir a la pantalla principal después de iniciar sesión exitosamente
@@ -46,11 +44,6 @@ const Login = ({ setToken, setUsername }) => {
       setError('Usuario o contraseña incorrectos');
     }
   };
-
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    console.log('Stored token in useEffect:', storedToken);
-  }, []);
 
   return (
     <div className="login-container">
