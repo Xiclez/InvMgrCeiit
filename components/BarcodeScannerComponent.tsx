@@ -40,14 +40,19 @@ const BarcodeScannerComponent = ({ onScan }) => {
               onPress: async () => {
                 try {
                   const loanResponse = await axios.get(`http://ulsaceiit.xyz/ulsa/getLoanByObjectId?id=${object._id}`);
-                  const loan = loanResponse.data;
+                  const loan = loanResponse.data[0]; // Asegúrate de obtener el primer préstamo relevante
                   console.log('Loan fetched:', loan);
 
                   const userResponse = await axios.get('http://ulsaceiit.xyz/users/buscar_usuario', { params: { id: loan.nameUser } });
                   const user = userResponse.data.usuarios.find(u => u._id === loan.nameUser);
                   console.log('User fetched:', user);
 
-                  navigation.navigate('ReturnContractForm', { user, object, loanId: loan._id });
+                  if (user && object && loan) {
+                    navigation.navigate('ReturnContractForm', { user, object, loanId: loan._id });
+                  } else {
+                    Alert.alert("Error al obtener datos del usuario, objeto o préstamo");
+                    setScanned(false);
+                  }
                 } catch (error) {
                   console.error("Error al devolver el préstamo:", error);
                   Alert.alert("Error al devolver el préstamo");

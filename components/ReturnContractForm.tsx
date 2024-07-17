@@ -5,7 +5,8 @@ import SignatureCanvas from 'react-native-signature-canvas';
 import { PDFDocument, rgb } from 'pdf-lib';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import axios from "axios";
+import axios from 'axios';
+import cloudinaryConfig from './cloudinaryConfig';  // Importa la configuración de Cloudinary
 
 const ReturnContractForm = ({ route }) => {
   const { user, object, loanId } = route.params;
@@ -19,12 +20,21 @@ const ReturnContractForm = ({ route }) => {
   const navigation = useNavigation();
 
   useEffect(() => {
+    if (!user || !object || !loanId) {
+      Alert.alert("Error", "No se han pasado los parámetros necesarios");
+      navigation.goBack();
+      return;
+    }
+    console.log("User:", user);
+    console.log("Object:", object);
+    console.log("Loan ID:", loanId);
+
     const loadLogo = async () => {
       const base64 = await FileSystem.readAsStringAsync(FileSystem.documentDirectory + 'logo_base64.txt');
       setLogoBase64(base64);
     };
     loadLogo();
-  }, []);
+  }, [user, object, loanId]);
 
   const handleSaveSignatures = () => {
     console.log("Saving signatures...");
@@ -45,20 +55,31 @@ const ReturnContractForm = ({ route }) => {
     console.log("File URI:", fileUri);
     if (fileUri) {
       await saveForm(fileUri);
-      await handleReturnRegisterClick(fileUri);
-      await shareFile(fileUri);
+      const cloudinaryUrl = await uploadToCloudinary(fileUri);
+      if (cloudinaryUrl) {
+        await handleReturnRegisterClick(cloudinaryUrl);
+        await shareFile(fileUri);
+      }
     }
   };
 
-  const handleReturnRegisterClick = async (fileUri) => {
-    console.log("Registering return...");
+  const handleReturnRegisterClick = async (cloudinaryUrl) => {
+    console.log("Registering return with Cloudinary URL:", cloudinaryUrl);
+    const requestData = {
+      loanId: loanId, 
+      linkCloseLoan: cloudinaryUrl 
+    };
+    console.log("Request data:", requestData);
+
     try {
-      await axios.post('http://ulsaceiit.xyz/ulsa/returnLoan', { 
-        loanId: loanId, 
-        linkCloseLoan: fileUri // Asegúrate de tener un enlace válido
-      });
-      Alert.alert("Devolución registrada correctamente");
-      navigation.navigate('ScannerScreen');
+      const response = await axios.post('http://ulsaceiit.xyz/ulsa/returnLoan', requestData, { headers: { 'Content-Type': 'application/json' } });
+      console.log("Response from server:", response.data);
+      if (response.status === 200) {
+        Alert.alert("Devolución registrada correctamente");
+        navigation.navigate('ScannerScreen');
+      } else {
+        throw new Error(response.data.mensaje || "Error desconocido");
+      }
     } catch (error) {
       console.error("Error al registrar la devolución:", error);
       Alert.alert("Error al registrar la devolución");
@@ -198,6 +219,31 @@ const ReturnContractForm = ({ route }) => {
     return fileUri;
   };
 
+  const uploadToCloudinary = async (fileUri) => {
+    const data = new FormData();
+    data.append('file', {
+      uri: fileUri,
+      type: 'application/pdf',
+      name: `return_contract_${new Date().getTime()}.pdf`,
+    });
+    data.append('upload_preset', cloudinaryConfig.upload_preset); // Usando el preset configurado
+
+    try {
+      console.log("Uploading to Cloudinary with data:", data);
+      const response = await axios.post(
+        `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloud_name}/upload`,
+        data,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      console.log("Cloudinary upload response:", response.data);
+      return response.data.secure_url;
+    } catch (error) {
+      console.error("Error uploading to Cloudinary:", error);
+      Alert.alert("Error al subir el archivo a Cloudinary");
+      return null;
+    }
+  };
+
   const shareFile = async (fileUri) => {
     if (await Sharing.isAvailableAsync()) {
       console.log("Sharing file:", fileUri);
@@ -279,4 +325,3 @@ const styles = StyleSheet.create({
 });
 
 export default ReturnContractForm;
-

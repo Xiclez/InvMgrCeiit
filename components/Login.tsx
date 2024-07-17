@@ -3,6 +3,7 @@ import axios from 'axios';
 import { View, Text, TextInput, Button, Alert, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import logo1 from '../assets/logo.png';
 import logo2 from '../assets/logoInvMgr.png';
 
@@ -34,10 +35,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const token = response.data.jwt;
       onLogin(token, username); // Set the username from input as the response doesn't include it
 
-      // Set token and username in local storage
-      // You may need to implement this differently depending on your application requirements
-      localStorage.setItem('token', token);
-      localStorage.setItem('username', username);
+      // Set token and username in AsyncStorage
+      await AsyncStorage.setItem('token', token);
+      await AsyncStorage.setItem('username', username);
       setError('');
     } catch (error) {
       console.error('Error al iniciar sesión', error);

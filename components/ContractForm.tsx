@@ -4,6 +4,8 @@ import SignatureCanvas from 'react-native-signature-canvas';
 import { PDFDocument, rgb } from 'pdf-lib';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import axios from 'axios';
+import cloudinary from './cloudinaryConfig';
 
 const ContractForm = ({ user, object, onLoanRegister }) => {
   const [ceiitName, setCeiitName] = useState('');
@@ -41,17 +43,21 @@ const ContractForm = ({ user, object, onLoanRegister }) => {
     console.log("File URI:", fileUri);
     if (fileUri) {
       await saveForm(fileUri);
-      handleLoanRegisterClick();
-      await shareFile(fileUri);
+      const cloudinaryUrl = await uploadToCloudinary(fileUri);
+      if (cloudinaryUrl) {
+        handleLoanRegisterClick(cloudinaryUrl);
+        await shareFile(fileUri);
+      }
     }
   };
 
-  const handleLoanRegisterClick = () => {
-    console.log("Registering loan...");
+  const handleLoanRegisterClick = (cloudinaryUrl) => {
+    console.log("Registering loan with URL:", cloudinaryUrl);
     onLoanRegister({
       userId: user._id,
       ceiitId: object._id,
-      date: new Date().toISOString()
+      date: new Date().toISOString(),
+      linkOpenLoan: cloudinaryUrl,
     });
     Alert.alert("Préstamo registrado correctamente");
   };
@@ -189,6 +195,31 @@ const ContractForm = ({ user, object, onLoanRegister }) => {
     return fileUri;
   };
 
+  const uploadToCloudinary = async (fileUri) => {
+    const data = new FormData();
+    data.append('file', {
+      uri: fileUri,
+      type: 'application/pdf',
+      name: `contract_form_${new Date().getTime()}.pdf`,
+    });
+    data.append('upload_preset', 'contracts'); // Reemplaza con tu upload preset de Cloudinary
+
+    try {
+      console.log("Uploading to Cloudinary with data:", data);
+      const response = await axios.post(
+        `https://api.cloudinary.com/v1_1/dbdy6vu2o/upload`,
+        data,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      console.log("Cloudinary upload response:", response.data);
+      return response.data.secure_url;
+    } catch (error) {
+      console.error("Error uploading to Cloudinary:", error);
+      Alert.alert("Error al subir el archivo a Cloudinary");
+      return null;
+    }
+  };
+
   const shareFile = async (fileUri) => {
     if (await Sharing.isAvailableAsync()) {
       console.log("Sharing file:", fileUri);
@@ -201,7 +232,7 @@ const ContractForm = ({ user, object, onLoanRegister }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>{new Date().toLocaleDateString()}</Text>
-      <Text style={styles.text}>{object.Lugarr}</Text>
+      <Text style={styles.text}>{object.Lugar}</Text>
       <Text style={styles.text}>
         Por medio del presente, doy fe que {user.name} {user.surName} con matrícula {user.tuition} tiene en su poder el objeto {object.NOMBRE} con número de serie {object._id} en óptimas condiciones y se compromete a regresarlo igualmente en condiciones en el plazo establecido.
       </Text>
@@ -243,10 +274,7 @@ const ContractForm = ({ user, object, onLoanRegister }) => {
       <Button title="Guardar Contrato" onPress={handleSaveContract} />
     </View>
   );
-  
-  
 };
-
 
 const styles = StyleSheet.create({
   container: {

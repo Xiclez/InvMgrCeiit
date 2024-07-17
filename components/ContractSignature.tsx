@@ -46,19 +46,24 @@ const ContractSignature = () => {
     const fileUri = await getFileUri();
     if (fileUri) {
       await saveForm(fileUri);
-      await registerLoan();
-      await shareFile(fileUri);
+      const cloudinaryUrl = await uploadToCloudinary(fileUri);
+      if (cloudinaryUrl) {
+        await registerLoan(cloudinaryUrl);
+        await shareFile(fileUri);
+      }
       setIsLoading(false);
     }
   };
 
-  const registerLoan = async () => {
+  const registerLoan = async (cloudinaryUrl) => {
     const contractData = {
       userId: user._id,
       ceiitId: object._id,
+      linkOpenLoan: cloudinaryUrl,
     };
 
     try {
+      console.log("Registering loan with data:", contractData);
       const response = await axios.post(
         'http://ulsaceiit.xyz/ulsa/loanObject',
         qs.stringify(contractData),
@@ -185,6 +190,31 @@ const ContractSignature = () => {
     }
 
     return fileUri;
+  };
+
+  const uploadToCloudinary = async (fileUri) => {
+    const data = new FormData();
+    data.append('file', {
+      uri: fileUri,
+      type: 'application/pdf',
+      name: `contract_form_${new Date().getTime()}.pdf`,
+    });
+    data.append('upload_preset', 'contracts'); // Reemplaza con tu upload preset de Cloudinary
+
+    try {
+      console.log("Uploading to Cloudinary with data:", data);
+      const response = await axios.post(
+        `https://api.cloudinary.com/v1_1/dbdy6vu2o/upload`,
+        data,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      console.log("Cloudinary upload response:", response.data);
+      return response.data.secure_url;
+    } catch (error) {
+      console.error("Error uploading to Cloudinary:", error);
+      Alert.alert("Error al subir el archivo a Cloudinary");
+      return null;
+    }
   };
 
   const shareFile = async (fileUri) => {

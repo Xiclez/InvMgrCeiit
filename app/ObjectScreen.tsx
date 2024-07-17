@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, Dimensions, Image, TouchableOpacity, TextInput } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ObjectScreen = ({ navigation }) => {
-  const [objects, setObjects] = useState<any[]>([]);
-  const [filteredObjects, setFilteredObjects] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [searchText, setSearchText] = useState<string>('');
+  const [objects, setObjects] = useState([]);
+  const [filteredObjects, setFilteredObjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState('');
 
   const fetchObjects = async () => {
     try {
-      const token = localStorage.getItem('token'); // Retrieve the token from local storage
+      const token = await AsyncStorage.getItem('token'); // Retrieve the token from AsyncStorage
       console.log('Fetching objects...');
       const response = await fetch('http://ulsaceiit.xyz/ulsa/getAllObjects', {
         headers: {
@@ -18,12 +19,10 @@ const ObjectScreen = ({ navigation }) => {
         },
       });
       const data = await response.json();
-      console.log('Response from server:', data);
       if (data.objs) {
         const groupedObjects = groupBy(data.objs, 'NOMBRE');
         setObjects(groupedObjects);
         setFilteredObjects(groupedObjects); // Set filteredObjects to be the same as objects initially
-        console.log('Objects set:', groupedObjects);
       } else {
         console.log('No objects found in response');
       }
@@ -57,7 +56,7 @@ const ObjectScreen = ({ navigation }) => {
     }
   };
 
-  const renderItem = ({ item }: { item: any }) => (
+  const renderItem = ({ item }) => (
     <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('ObjectDetail', { objects: item })}>
       <Image
         style={styles.image}
